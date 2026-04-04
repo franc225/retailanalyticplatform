@@ -167,22 +167,22 @@ retail-analytic-platform
 
 ## Planned Analyses
 
-Retail Analytics
-	average basket size
-	most popular products
-	department-level product demand
-	purchase patterns by day of week and hour of day
-Market Basket Analysis
-	product association rules
-	frequently bought together products
-	cross-sell opportunities
-Customer Analytics
-	purchase frequency
-	reorder behavior
-	customer segmentation
-Forecasting
-	product demand forecasting
-	department-level demand trends
+- Retail Analytics
+	- average basket size
+	- most popular products
+	- department-level product demand
+	- purchase patterns by day of week and hour of day
+- Market Basket Analysis
+	- product association rules
+	- frequently bought together products
+	- cross-sell opportunities
+- Customer Analytics
+	- purchase frequency
+	- reorder behavior
+	- customer segmentation
+- Forecasting
+	- product demand forecasting
+	- department-level demand trends
 	
 ## Technologies
 
@@ -192,6 +192,6 @@ Forecasting
 - Matplotlib
 - Kaggle dataset
 
-##Example Visualization
+## Example Visualization
 
 Coming soon.
