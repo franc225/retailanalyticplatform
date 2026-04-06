@@ -92,3 +92,88 @@ JOIN mart.dim_product p
     ON f.product_id = p.product_id
 GROUP BY p.department
 ORDER BY total_items_ordered DESC;
+
+SET preserve_insertion_order = false;
+SET threads = 2;
+SET temp_directory = 'C:/dev/retailanalyticplatform/.duckdb_tmp/';
+
+CREATE OR REPLACE TABLE mart.top_products_for_basket AS
+SELECT product_id
+FROM mart.v_product_summary
+ORDER BY times_ordered DESC
+LIMIT 300;
+
+CREATE OR REPLACE TABLE mart.filtered_order_items AS
+SELECT f.order_id, f.product_id
+FROM mart.fact_order_items f
+JOIN mart.top_products_for_basket tp
+  ON f.product_id = tp.product_id
+WHERE f.basket_size >= 2;
+
+CREATE OR REPLACE TABLE mart.product_pairs AS
+SELECT
+    f1.product_id AS product_1,
+    f2.product_id AS product_2,
+    COUNT(*) AS pair_count
+FROM mart.filtered_order_items f1
+JOIN mart.filtered_order_items f2
+    ON f1.order_id = f2.order_id
+   AND f1.product_id < f2.product_id
+GROUP BY 1, 2;
+
+CREATE OR REPLACE VIEW mart.v_product_pair_summary AS
+SELECT
+    p1.product_name AS product_1,
+    p2.product_name AS product_2,
+    pp.pair_count
+FROM mart.product_pairs pp
+JOIN mart.dim_product p1
+  ON pp.product_1 = p1.product_id
+JOIN mart.dim_product p2
+  ON pp.product_2 = p2.product_id
+ORDER BY pp.pair_count DESC;
+
+CREATE OR REPLACE VIEW mart.v_association_rules AS
+WITH product_counts AS (
+    SELECT
+        product_id,
+        COUNT(DISTINCT order_id) AS product_orders
+    FROM mart.filtered_order_items
+    GROUP BY product_id
+),
+total_orders AS (
+    SELECT COUNT(DISTINCT order_id) AS total_orders
+    FROM mart.filtered_order_items
+)
+SELECT
+    pp.product_1,
+    pp.product_2,
+    pp.pair_count,
+    pc1.product_orders AS product_1_orders,
+    pc2.product_orders AS product_2_orders,
+    pp.pair_count * 1.0 / t.total_orders AS support,
+    pp.pair_count * 1.0 / pc1.product_orders AS confidence,
+    (pp.pair_count * 1.0 / pc1.product_orders) /
+    (pc2.product_orders * 1.0 / t.total_orders) AS lift
+FROM mart.product_pairs pp
+JOIN product_counts pc1 ON pp.product_1 = pc1.product_id
+JOIN product_counts pc2 ON pp.product_2 = pc2.product_id
+CROSS JOIN total_orders t;
+
+CREATE OR REPLACE VIEW mart.v_association_rules_named AS
+SELECT
+    ar.product_1,
+    p1.product_name AS product_1_name,
+    ar.product_2,
+    p2.product_name AS product_2_name,
+    ar.pair_count,
+    ar.product_1_orders,
+    ar.product_2_orders,
+    ar.support,
+    ar.confidence,
+    ar.lift
+FROM mart.v_association_rules ar
+JOIN mart.dim_product p1
+    ON ar.product_1 = p1.product_id
+JOIN mart.dim_product p2
+    ON ar.product_2 = p2.product_id;

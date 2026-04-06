@@ -1,0 +1,292 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Basket Analysis Report</title>
+    <style>
+        :root {
+            --bg: #f6f8fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 20px 48px;
+        }
+
+        .hero {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            margin: 0 0 12px;
+            font-size: 2rem;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--muted);
+            max-width: 820px;
+        }
+
+        .meta {
+            margin-top: 16px;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        .section-title {
+            margin: 28px 0 16px;
+            font-size: 1.35rem;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .kpi-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 1.35rem;
+            font-weight: bold;
+            word-break: break-word;
+        }
+
+        .kpi-value.small {
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .chart-card h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+        }
+
+        .chart-description {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .chart-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #fff;
+            cursor: zoom-in;
+            transition: transform 0.2s ease;
+        }
+
+        .chart-card img:hover {
+            transform: scale(1.01);
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            padding-top: 40px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+        }
+
+        .image-modal img {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 85%;
+        }
+
+        .image-modal span {
+            position: absolute;
+            top: 25px;
+            right: 40px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+        }
+
+        .footer {
+            margin-top: 32px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 1.6rem;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <h1>Market Basket Analysis Report</h1>
+            <p>
+                This report presents association rule mining results built from the Instacart Market Basket dataset.
+                Product co-occurrence patterns were analyzed from filtered baskets in DuckDB, exported to CSV,
+                and visualized with Python and Matplotlib to identify frequently bought together products and
+                cross-sell opportunities.
+            </p>
+            <div class="meta">Generated on 2026-04-06 16:15</div>
+        </section>
+
+        <h2 class="section-title">Key Metrics</h2>
+        
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Association Rules</div>
+            <div class="kpi-value">200</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Average Lift</div>
+            <div class="kpi-value">8.64</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Average Confidence</div>
+            <div class="kpi-value">0.112</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Average Support</div>
+            <div class="kpi-value">0.0012</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Top Lift Rule</div>
+            <div class="kpi-value small">Icelandic Style Skyr Blueberry Non-fat Yogurt → Non Fat Raspberry Yogurt</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Most Frequent Pair</div>
+            <div class="kpi-value small">Organic Yellow Onion + Organic Garlic</div>
+        </div>
+    </div>
+    
+
+        <h2 class="section-title">Visual Insights</h2>
+        <section class="chart-grid">
+            
+        <article class="chart-card">
+            <h2>Top Association Rules</h2>
+            <p class="chart-description">Ranks the product association rules with the highest lift, highlighting the strongest product relationships.</p>
+            <img src="figures/top_association_rules.png" alt="Top Association Rules" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Lift Distribution</h2>
+            <p class="chart-description">Shows the overall distribution of lift values across association rules.</p>
+            <img src="figures/lift_distribution.png" alt="Lift Distribution" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Support Vs Confidence</h2>
+            <p class="chart-description">Compares rule frequency and rule strength to identify the most actionable rules.</p>
+            <img src="figures/support_vs_confidence.png" alt="Support Vs Confidence" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Cross Sell Opportunities</h2>
+            <p class="chart-description">Highlights product combinations with strong cross-sell potential based on confidence and lift.</p>
+            <img src="figures/cross_sell_opportunities.png" alt="Cross Sell Opportunities" class="zoomable">
+        </article>
+        
+        </section>
+
+        <div class="footer">
+            Retail Analytic Platform · Market Basket Analysis
+        </div>
+    </div>
+
+    <div id="imgModal" class="image-modal">
+        <span id="closeModal">&times;</span>
+        <img id="modalImage">
+    </div>
+
+    <script>
+        const modal = document.getElementById("imgModal");
+        const modalImg = document.getElementById("modalImage");
+        const closeBtn = document.getElementById("closeModal");
+
+        document.querySelectorAll(".zoomable").forEach(img => {
+            img.onclick = function() {
+                modal.style.display = "block";
+                modalImg.src = this.src;
+            };
+        });
+
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        };
+
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                modal.style.display = "none";
+            }
+        };
+    </script>
+</body>
+</html>

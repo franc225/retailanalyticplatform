@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-orange)
 ![Dataset](https://img.shields.io/badge/Data-Kaggle-green)
-![Status](https://img.shields.io/badge/Stage-Retail%20Analytics%20Completed-brightgreen)
+![Status](https://img.shields.io/badge/Stage-Market%20Basket%20Analysis%20Completed-brightgreen)
 
 Retail analytics project based on the Instacart Market Basket dataset.
 
@@ -101,6 +101,26 @@ Visualizations include:
 - top departments
 - customer order frequency distribution
 
+## Market Basket Analysis
+
+Market Basket Analysis identifies relationships between products frequently purchased together.
+
+The analysis is built on the order-item fact table and computes association rules between products using DuckDB.
+
+Key metrics include:
+
+- support
+- confidence
+- lift
+
+The association rules enable identification of:
+
+- frequently bought together products
+- cross-sell opportunities
+- strong product affinities
+
+The results are exported as CSV and visualized using Python and Matplotlib.
+
 ## Star schema
 
 The analytical model follows a classic **star schema** centered on the
@@ -188,25 +208,45 @@ Retail Analytics Report
 └── Customer Order Distribution
 ```
 
+## Market Basket Analysis Report
+
+An automated HTML report is generated from the association rule analysis.
+
+The report includes:
+
+- key association metrics
+- strongest product associations
+- lift distribution
+- support vs confidence analysis
+- cross-sell opportunities
+
+The report provides an interactive visualization layout with image zoom for detailed inspection.
+
 ## Current Progress
 
 Completed so far:
 
-- Instacart dataset downloaded
-- raw files stored in data/raw
-- source files loaded into DuckDB
-- analytical star schema implemented in the mart schema
+Data ingestion
+- Instacart dataset downloaded and stored in `data/raw`
+- raw files loaded into DuckDB
+
+Data modeling
+- analytical star schema created in the `mart` schema
 - fact table built at the order-item grain
-- dimensions created:
-	- dim_product
-	- dim_customer
-	- dim_order_day
-	- dim_order_time
-- Retail analytics layer implemented:
-      - analytical views created for reporting
-      - aggregated datasets exported as CSV
-      - Python visualizations generated using Matplotlib
-      - automated HTML analytics report generated
+- core dimensions implemented
+
+Retail analytics
+- analytical reporting views
+- aggregated datasets exported
+- Python visualizations
+- automated HTML analytics report
+
+Market basket analysis
+- product pair generation
+- association rule computation
+- support, confidence and lift metrics
+- cross-sell opportunity analysis
+- automated HTML report with interactive visualizations
 
 ## Repository Structure
 
@@ -217,6 +257,7 @@ retail-analytic-platform
 │   ├── raw
 │   ├── warehouse
 │   └── exports
+│       ├── association_rules.csv
 │
 ├── ingestion
 │
@@ -228,10 +269,12 @@ retail-analytic-platform
 │   ├── validation.sql
 │   └── export_views.sql
 │   └── retail_visualizations.py
+│   └── market_basket_visualizations.py
 |
 ├── reports
 │   ├── figures
 │   └── retail_analytics_report.html
+│   └── market_basket_report.html
 │
 ├── notebooks
 │
@@ -240,10 +283,6 @@ retail-analytic-platform
 
 ## Planned Analyses
 
-- Market Basket Analysis
-	- product association rules
-	- frequently bought together products
-	- cross-sell opportunities
 - Customer Analytics
 	- purchase frequency
 	- reorder behavior

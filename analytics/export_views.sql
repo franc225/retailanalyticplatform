@@ -21,3 +21,27 @@ TO 'data/exports/basket_size_distribution.csv'
 COPY mart.v_department_summary
 TO 'data/exports/department_summary.csv'
 (HEADER, DELIMITER ',');
+
+COPY (
+    SELECT *
+    FROM mart.v_association_rules
+    WHERE pair_count >= 50
+      AND confidence >= 0.05
+      AND lift > 1
+    ORDER BY lift DESC
+    LIMIT 200
+)
+TO 'data/exports/association_rules.csv'
+(HEADER, DELIMITER ',');
+
+COPY (
+    SELECT *
+    FROM mart.v_association_rules_named
+    WHERE pair_count >= 50
+      AND confidence >= 0.05
+      AND lift > 1
+    ORDER BY lift DESC
+    LIMIT 200
+)
+TO 'data/exports/association_rules.csv'
+(HEADER, DELIMITER ',');
