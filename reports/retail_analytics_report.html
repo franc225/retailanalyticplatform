@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Analytics Report</title>
+    <style>
+        :root {
+            --bg: #f6f8fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 20px 48px;
+        }
+
+        .hero {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            margin: 0 0 12px;
+            font-size: 2rem;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--muted);
+            max-width: 800px;
+        }
+
+        .meta {
+            margin-top: 16px;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        .section-title {
+            margin: 28px 0 16px;
+            font-size: 1.35rem;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .kpi-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .chart-card h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+        }
+
+        .chart-description {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .chart-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
+        .footer {
+            margin-top: 32px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 1.6rem;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .zoomable {
+            cursor: zoom-in;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            padding-top: 40px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+        }
+
+        .image-modal img {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 85%;
+        }
+
+        .image-modal span {
+            position: absolute;
+            top: 25px;
+            right: 40px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <h1>Retail Analytics Report</h1>
+            <p>
+                This report presents exploratory retail analytics built from the Instacart Market Basket dataset.
+                The analysis is based on a DuckDB star schema and aggregated reporting views exported to CSV,
+                then visualized with Python and Matplotlib.
+            </p>
+            <div class="meta">Generated on 2026-04-06 10:58</div>
+        </section>
+
+        <h2 class="section-title">Key Metrics</h2>
+        
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Customers</div>
+            <div class="kpi-value">206,209</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Basket Size</div>
+            <div class="kpi-value">9.98</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Top Shopping Day</div>
+            <div class="kpi-value">Sunday</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Peak Hour</div>
+            <div class="kpi-value">10:00</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Departments</div>
+            <div class="kpi-value">21</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Top Product</div>
+            <div class="kpi-value">Banana</div>
+        </div>
+    </div>
+    
+
+        <h2 class="section-title">Visual Insights</h2>
+        <section class="chart-grid">
+            
+        <article class="chart-card">
+            <h2>Orders By Day</h2>
+            <p class="chart-description">Shows weekly ordering patterns and highlights the most active shopping days.</p>
+            <img src="figures/orders_by_day.png" alt="Orders By Day" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Orders By Hour</h2>
+            <p class="chart-description">Highlights peak ordering hours and daily customer shopping behavior.</p>
+            <img src="figures/orders_by_hour.png" alt="Orders By Hour" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Basket Size Distribution</h2>
+            <p class="chart-description">Shows how large customer baskets typically are and how concentrated demand is.</p>
+            <img src="figures/basket_size_distribution.png" alt="Basket Size Distribution" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Top Products</h2>
+            <p class="chart-description">Ranks the most frequently ordered products across all customer orders.</p>
+            <img src="figures/top_products.png" alt="Top Products" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Top Departments</h2>
+            <p class="chart-description">Summarizes the departments generating the highest item volume.</p>
+            <img src="figures/top_departments.png" alt="Top Departments" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Customer Order Distribution</h2>
+            <p class="chart-description">Provides a simple segmentation of customers based on ordering frequency.</p>
+            <img src="figures/customer_order_distribution.png" alt="Customer Order Distribution" class="zoomable">
+        </article>
+        
+        </section>
+
+        <div class="footer">
+            Retail Analytic Platform · Instacart Market Basket
+        </div>
+    </div>
+    <div id="imgModal" class="image-modal">
+        <span id="closeModal">&times;</span>
+        <img id="modalImage">
+    </div>
+    <script>
+    const modal = document.getElementById("imgModal");
+    const modalImg = document.getElementById("modalImage");
+    const closeBtn = document.getElementById("closeModal");
+
+    document.querySelectorAll(".zoomable").forEach(img => {
+        img.onclick = function() {
+            modal.style.display = "block";
+            modalImg.src = this.src;
+        };
+    });
+
+    closeBtn.onclick = function() {
+        modal.style.display = "none";
+    };
+
+    modal.onclick = function(e) {
+        if (e.target === modal) {
+            modal.style.display = "none";
+        }
+    };
+    </script>
+</body>
+</html>
