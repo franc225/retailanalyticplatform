@@ -51,6 +51,8 @@ DuckDB
       ↓
 Star Schema
       ↓
+Analytical Views
+      ↓
 Retail Analytics
       ↓
 Market Basket Analysis
@@ -77,73 +79,78 @@ This grain supports:
 
 ## Star schema
 
+The analytical model follows a classic **star schema** centered on the
+`fact_order_items` table at the **order-item grain**.
+
+Each row represents:
+
+1 product × 1 order × 1 customer × 1 timestamp
+
 ```mermaid
 erDiagram
+
     FACT_ORDER_ITEMS {
-        INTEGER order_id
-        INTEGER customer_id
-        INTEGER product_id
-        INTEGER order_day_id
-        INTEGER order_time_id
-        INTEGER order_number
-        DOUBLE days_since_prior_order
-        VARCHAR eval_set
-        INTEGER basket_size
-        INTEGER add_to_cart_order
-        INTEGER reordered
-        BOOLEAN is_weekend
+        int order_id FK
+        int customer_id FK
+        int product_id FK
+        int order_day_id FK
+        int order_time_id FK
+        int add_to_cart_order
+        int reordered
+        int basket_size
     }
 
     DIM_PRODUCT {
-        INTEGER product_id
-        VARCHAR product_name
-        INTEGER aisle_id
-        VARCHAR aisle
-        INTEGER department_id
-        VARCHAR department
+        int product_id PK
+        string product_name
+        string aisle
+        string department
     }
 
     DIM_CUSTOMER {
-        INTEGER customer_id
-        INTEGER first_order_number
-        INTEGER last_order_number
-        INTEGER total_orders
-        DOUBLE avg_days_between_orders
+        int customer_id PK
+        int total_orders
+        float avg_days_between_orders
     }
 
     DIM_ORDER_DAY {
-        INTEGER order_day_id
-        INTEGER order_dow
-        VARCHAR day_name
-        BOOLEAN is_weekend
+        int order_day_id PK
+        string day_name
+        bool is_weekend
     }
 
     DIM_ORDER_TIME {
-        INTEGER order_time_id
-        INTEGER order_hour_of_day
-        VARCHAR hour_label
-        VARCHAR time_bucket
+        int order_time_id PK
+        int order_hour_of_day
+        string time_bucket
     }
 
-    FACT_ORDER_ITEMS }o--|| DIM_PRODUCT : product_id
-    FACT_ORDER_ITEMS }o--|| DIM_CUSTOMER : customer_id
-    FACT_ORDER_ITEMS }o--|| DIM_ORDER_DAY : order_day_id
-    FACT_ORDER_ITEMS }o--|| DIM_ORDER_TIME : order_time_id
+    DIM_PRODUCT ||--o{ FACT_ORDER_ITEMS : product
+    DIM_CUSTOMER ||--o{ FACT_ORDER_ITEMS : customer
+    DIM_ORDER_DAY ||--o{ FACT_ORDER_ITEMS : day
+    DIM_ORDER_TIME ||--o{ FACT_ORDER_ITEMS : time
 ```
 
 ## Current Progress
 
 Completed so far:
 
-- raw Instacart data downloaded and stored in data/raw
+- Instacart dataset downloaded
+- raw files stored in data/raw
 - source files loaded into DuckDB
-- analytical star schema created in the mart schema
+- analytical star schema implemented in the mart schema
 - fact table built at the order-item grain
-- core dimensions created:
-	dim_product
-	dim_customer
-	dim_order_day
-	dim_order_time
+- dimensions created:
+	- dim_product
+	- dim_customer
+	- dim_order_day
+	- dim_order_time
+- analytical reporting views created:
+      - v_customer_summary
+      - v_product_summary
+      - v_orders_by_day
+      - v_orders_by_hour3
+- basic validation queries implemented
 
 ## Repository Structure
 
@@ -152,13 +159,18 @@ retail-analytic-platform
 │
 ├── data
 │   ├── raw
-│   └── warehouse
+│   ├── warehouse
+│   └── exports
 │
 ├── ingestion
 │
 ├── modeling
+│   ├── star_schema.sql
+│   └── analytical_views.sql
 │
 ├── analytics
+│   ├── validation.sql
+│   └── export_views.sql
 │
 ├── notebooks
 │
