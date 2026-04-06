@@ -2,6 +2,7 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
+import networkx as nx
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
@@ -93,6 +94,104 @@ def plot_cross_sell():
 
     return path
 
+def plot_product_network():
+
+    df = rules[
+        (rules["lift"] > 2) &
+        (rules["confidence"] > 0.1)
+    ].copy()
+
+    df = df.sort_values("lift", ascending=False).head(40)
+
+    G = nx.Graph()
+
+    for _, row in df.iterrows():
+
+        p1 = row["product_1_name"]
+        p2 = row["product_2_name"]
+        weight = row["lift"]
+
+        G.add_edge(p1, p2, weight=weight)
+
+    plt.figure(figsize=(12,10))
+
+    pos = nx.spring_layout(G, k=0.5, seed=42)
+
+    weights = [G[u][v]["weight"] for u,v in G.edges()]
+
+    nx.draw_networkx_nodes(
+        G,
+        pos,
+        node_size=600,
+        node_color="lightblue"
+    )
+
+    nx.draw_networkx_edges(
+        G,
+        pos,
+        width=[w*0.3 for w in weights],
+        alpha=0.7
+    )
+
+    nx.draw_networkx_labels(
+        G,
+        pos,
+        font_size=8
+    )
+
+    plt.title("Product Association Network")
+
+    path = FIGURES_DIR / "product_network.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150)
+    plt.close()
+
+    return path
+
+def plot_rule_quality_quadrant() -> Path:
+    df = rules.copy()
+
+    plt.figure(figsize=(9, 6))
+    plt.scatter(
+        df["confidence"],
+        df["lift"],
+        s=df["pair_count"] * 2,
+        alpha=0.5
+    )
+
+    plt.xlabel("Confidence")
+    plt.ylabel("Lift")
+    plt.title("Rule Quality Quadrant")
+
+    path = FIGURES_DIR / "rule_quality_quadrant.png"
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_top_rules_by_confidence() -> Path:
+    df = rules.sort_values(["confidence", "lift"], ascending=False).head(15).copy()
+
+    p1_col = "product_1_name" if "product_1_name" in df.columns else "product_1"
+    p2_col = "product_2_name" if "product_2_name" in df.columns else "product_2"
+
+    labels = df[p1_col].astype(str) + " → " + df[p2_col].astype(str)
+
+    plt.figure(figsize=(10, 6))
+    plt.barh(labels[::-1], df["confidence"][::-1])
+
+    plt.xlabel("Confidence")
+    plt.title("Top Association Rules by Confidence")
+
+    path = FIGURES_DIR / "top_rules_by_confidence.png"
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
 def generate_html_report(image_paths: list[Path]) -> Path:
     html_path = REPORT_DIR / "market_basket_report.html"
 
@@ -113,7 +212,10 @@ def generate_html_report(image_paths: list[Path]) -> Path:
         "top_association_rules": "Ranks the product association rules with the highest lift, highlighting the strongest product relationships.",
         "lift_distribution": "Shows the overall distribution of lift values across association rules.",
         "support_vs_confidence": "Compares rule frequency and rule strength to identify the most actionable rules.",
-        "cross_sell_opportunities": "Highlights product combinations with strong cross-sell potential based on confidence and lift."
+        "cross_sell_opportunities": "Highlights product combinations with strong cross-sell potential based on confidence and lift.",
+        "product_network": "Network graph showing relationships between strongly associated products.",
+        "rule_quality_quadrant": "Compares confidence and lift while sizing rules by pair frequency to highlight the most actionable associations.",
+        "top_rules_by_confidence": "Ranks association rules by confidence to identify the strongest conditional product recommendations.",
     }
 
     cards_html = f"""
@@ -143,6 +245,39 @@ def generate_html_report(image_paths: list[Path]) -> Path:
             <div class="kpi-value small">{top_support_label}</div>
         </div>
     </div>
+    <h2 class="section-title">Key Insights</h2>
+
+    <div class="kpi-grid">
+
+    <div class="kpi-card">
+    <div class="kpi-label">Strongest Product Association</div>
+    <div class="kpi-value small">
+    Icelandic Style Skyr Blueberry Non-fat Yogurt → Non Fat Raspberry Yogurt
+    </div>
+    </div>
+
+    <div class="kpi-card">
+    <div class="kpi-label">Most Frequent Basket Pair</div>
+    <div class="kpi-value small">
+    Organic Yellow Onion + Organic Garlic
+    </div>
+    </div>
+
+    <div class="kpi-card">
+    <div class="kpi-label">Typical Confidence Range</div>
+    <div class="kpi-value small">
+    0.08 – 0.15
+    </div>
+    </div>
+
+    <div class="kpi-card">
+    <div class="kpi-label">Typical Lift Range</div>
+    <div class="kpi-value small">
+    2 – 10+
+    </div>
+    </div>
+
+    </div>
     """
 
     ordered_chart_keys = [
@@ -150,6 +285,9 @@ def generate_html_report(image_paths: list[Path]) -> Path:
         "lift_distribution",
         "support_vs_confidence",
         "cross_sell_opportunities",
+        "product_network",
+        "rule_quality_quadrant",
+        "top_rules_by_confidence",
     ]
 
     image_map = {path.stem: path for path in image_paths}
@@ -308,6 +446,8 @@ def generate_html_report(image_paths: list[Path]) -> Path:
             background: #fff;
             cursor: zoom-in;
             transition: transform 0.2s ease;
+            max-height: 420px;
+            object-fit: contain;
         }}
 
         .chart-card img:hover {{
@@ -413,6 +553,23 @@ def generate_html_report(image_paths: list[Path]) -> Path:
             }}
         }};
     </script>
+    <h2 class="section-title">How to Interpret These Results</h2>
+
+    <p>
+    <strong>Support</strong> measures how frequently a product pair appears in all orders.
+    Higher support indicates more common combinations.
+    </p>
+
+    <p>
+    <strong>Confidence</strong> measures how often product B is purchased when product A
+    is already in the basket.
+    </p>
+
+    <p>
+    <strong>Lift</strong> measures how much more likely the two products are purchased
+    together compared to random chance. Lift values above 1 indicate a positive
+    association.
+    </p>
 </body>
 </html>
 """
@@ -427,6 +584,9 @@ def main() -> None:
     generated_files.append(plot_lift_distribution())
     generated_files.append(plot_support_confidence())
     generated_files.append(plot_cross_sell())
+    generated_files.append(plot_product_network())
+    generated_files.append(plot_rule_quality_quadrant())
+    generated_files.append(plot_top_rules_by_confidence())
 
     html_report = generate_html_report(generated_files)
 

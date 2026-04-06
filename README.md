@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-orange)
 ![Dataset](https://img.shields.io/badge/Data-Kaggle-green)
-![Status](https://img.shields.io/badge/Stage-Market%20Basket%20Analysis%20Completed-brightgreen)
+![Status](https://img.shields.io/badge/Stage-Market%20Basket%20Analysis-brightgreen)
 
 Retail analytics project based on the Instacart Market Basket dataset.
 
@@ -224,20 +224,21 @@ The report provides an interactive visualization layout with image zoom for deta
 
 ## Current Progress
 
-Completed so far:
+Completed:
 
 Data ingestion
-- Instacart dataset downloaded and stored in `data/raw`
-- raw files loaded into DuckDB
+- Instacart dataset downloaded from Kaggle
+- raw CSV files stored in `data/raw`
+- data loaded into DuckDB
 
 Data modeling
 - analytical star schema created in the `mart` schema
-- fact table built at the order-item grain
-- core dimensions implemented
+- fact table at the order-item grain
+- product, customer, day and time dimensions
 
 Retail analytics
-- analytical reporting views
-- aggregated datasets exported
+- aggregated reporting views
+- CSV exports for analytics
 - Python visualizations
 - automated HTML analytics report
 
@@ -287,9 +288,9 @@ retail-analytic-platform
 	- purchase frequency
 	- reorder behavior
 	- customer segmentation
-- Forecasting
-	- product demand forecasting
-	- department-level demand trends
+- Demand Forecasting
+      - product demand forecasting
+      - department demand trends
 	
 ## Technologies
 

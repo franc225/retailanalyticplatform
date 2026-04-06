@@ -132,6 +132,8 @@
             background: #fff;
             cursor: zoom-in;
             transition: transform 0.2s ease;
+            max-height: 420px;
+            object-fit: contain;
         }
 
         .chart-card img:hover {
@@ -194,7 +196,7 @@
                 and visualized with Python and Matplotlib to identify frequently bought together products and
                 cross-sell opportunities.
             </p>
-            <div class="meta">Generated on 2026-04-06 16:15</div>
+            <div class="meta">Generated on 2026-04-06 19:03</div>
         </section>
 
         <h2 class="section-title">Key Metrics</h2>
@@ -225,6 +227,39 @@
             <div class="kpi-value small">Organic Yellow Onion + Organic Garlic</div>
         </div>
     </div>
+    <h2 class="section-title">Key Insights</h2>
+
+    <div class="kpi-grid">
+
+    <div class="kpi-card">
+    <div class="kpi-label">Strongest Product Association</div>
+    <div class="kpi-value small">
+    Icelandic Style Skyr Blueberry Non-fat Yogurt → Non Fat Raspberry Yogurt
+    </div>
+    </div>
+
+    <div class="kpi-card">
+    <div class="kpi-label">Most Frequent Basket Pair</div>
+    <div class="kpi-value small">
+    Organic Yellow Onion + Organic Garlic
+    </div>
+    </div>
+
+    <div class="kpi-card">
+    <div class="kpi-label">Typical Confidence Range</div>
+    <div class="kpi-value small">
+    0.08 – 0.15
+    </div>
+    </div>
+
+    <div class="kpi-card">
+    <div class="kpi-label">Typical Lift Range</div>
+    <div class="kpi-value small">
+    2 – 10+
+    </div>
+    </div>
+
+    </div>
     
 
         <h2 class="section-title">Visual Insights</h2>
@@ -252,6 +287,24 @@
             <h2>Cross Sell Opportunities</h2>
             <p class="chart-description">Highlights product combinations with strong cross-sell potential based on confidence and lift.</p>
             <img src="figures/cross_sell_opportunities.png" alt="Cross Sell Opportunities" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Product Network</h2>
+            <p class="chart-description">Network graph showing relationships between strongly associated products.</p>
+            <img src="figures/product_network.png" alt="Product Network" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Rule Quality Quadrant</h2>
+            <p class="chart-description">Compares confidence and lift while sizing rules by pair frequency to highlight the most actionable associations.</p>
+            <img src="figures/rule_quality_quadrant.png" alt="Rule Quality Quadrant" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Top Rules By Confidence</h2>
+            <p class="chart-description">Ranks association rules by confidence to identify the strongest conditional product recommendations.</p>
+            <img src="figures/top_rules_by_confidence.png" alt="Top Rules By Confidence" class="zoomable">
         </article>
         
         </section>
@@ -288,5 +341,22 @@
             }
         };
     </script>
+    <h2 class="section-title">How to Interpret These Results</h2>
+
+    <p>
+    <strong>Support</strong> measures how frequently a product pair appears in all orders.
+    Higher support indicates more common combinations.
+    </p>
+
+    <p>
+    <strong>Confidence</strong> measures how often product B is purchased when product A
+    is already in the basket.
+    </p>
+
+    <p>
+    <strong>Lift</strong> measures how much more likely the two products are purchased
+    together compared to random chance. Lift values above 1 indicate a positive
+    association.
+    </p>
 </body>
 </html>
