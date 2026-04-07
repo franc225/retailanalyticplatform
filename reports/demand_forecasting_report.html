@@ -205,7 +205,7 @@
                 weekly timeline using customer order sequences and days-since-prior-order logic in DuckDB. These
                 trend views provide a foundation for future forecasting models and demand planning analysis.
             </p>
-            <div class="meta">Generated on 2026-04-07 09:39</div>
+            <div class="meta">Generated on 2026-04-07 11:04</div>
         </section>
 
         <h2 class="section-title">Key Metrics</h2>
@@ -301,6 +301,54 @@
             <img src="figures/top_departments_total_demand.png" alt="Top Departments Total Demand" class="zoomable">
         </article>
         
+        <article class="chart-card">
+            <h2>Moving Average Forecast</h2>
+            <p class="chart-description">Applies a 4-week moving average to product demand trends to provide a simple baseline forecast for future demand.</p>
+            <img src="figures/moving_average_forecast.png" alt="Moving Average Forecast" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Weekly Demand Evolution</h2>
+            <p class="chart-description">Displays the distribution of weekly demand across all products and departments.</p>
+            <img src="figures/weekly_demand_evolution.png" alt="Weekly Demand Evolution" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Demand Anomalies</h2>
+            <p class="chart-description">Identifies weeks where total demand significantly deviated from the average, which may indicate anomalies or special events.</p>
+            <img src="figures/demand_anomalies.png" alt="Demand Anomalies" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Product Peak Weeks</h2>
+            <p class="chart-description">Shows the reconstructed relative week in which each selected product reaches its highest observed demand, excluding week 0 to reduce cohort alignment bias.</p>
+            <img src="figures/product_peak_weeks.png" alt="Product Peak Weeks" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Department Peak Weeks</h2>
+            <p class="chart-description">Shows the reconstructed relative week in which each department reaches its highest observed demand, excluding week 0 to reduce cohort alignment bias.</p>
+            <img src="figures/department_peak_weeks.png" alt="Department Peak Weeks" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Weekly Demand Pattern</h2>
+            <p class="chart-description">Displays the overall weekly demand pattern across all products and departments.</p>
+            <img src="figures/weekly_demand_pattern.png" alt="Weekly Demand Pattern" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Replenishment Cycle Pattern</h2>
+            <p class="chart-description">Shows the 4-week replenishment cycle pattern across all products and departments.</p>
+            <img src="figures/replenishment_cycle_pattern.png" alt="Replenishment Cycle Pattern" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Product Demand Heatmap</h2>
+            <p class="chart-description">Visualizes the demand for each product across different weeks using a heatmap.</p>
+            <img src="figures/product_demand_heatmap.png" alt="Product Demand Heatmap" class="zoomable">
+        </article>
+        
         </section>
 
         <div class="container">
@@ -319,6 +367,17 @@
 
                 <p>
                 <strong>Orders Count</strong> counts distinct orders containing a product or department during a given relative week.
+                </p>
+
+                <p>
+                <strong>Peak Relative Week</strong> indicates the reconstructed week in which a product or department reaches
+                its highest observed demand within the relative customer timeline. It does not represent a true calendar
+                week of the year.
+                </p>
+
+                <p>
+                <strong>Week 0 Exclusion</strong> removes the cohort-aligned starting week shared by nearly all customers,
+                which otherwise dominates the relative timeline and can hide more meaningful later demand peaks.
                 </p>
 
                 <p>

@@ -355,3 +355,4 @@ WHERE f.relative_week_index >= rw.max_week - 52
 GROUP BY
     f.relative_week_index,
     p.department;
+    

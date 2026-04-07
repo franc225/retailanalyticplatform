@@ -121,6 +121,487 @@ def plot_top_departments():
 
     return path
 
+def compute_moving_average_forecast(df, window=4):
+
+    df = df.sort_values("relative_week_index")
+
+    df["moving_avg"] = (
+        df["units_sold"]
+        .rolling(window=window)
+        .mean()
+    )
+
+    return df
+
+def build_product_forecast_dataset():
+
+    forecasts = []
+
+    for product in product_demand["product_name"].unique():
+
+        sub = product_demand[
+            product_demand["product_name"] == product
+        ].copy()
+
+        sub = compute_moving_average_forecast(sub)
+
+        sub["product_name"] = product
+
+        forecasts.append(sub)
+
+    return pd.concat(forecasts)
+
+def plot_product_forecast():
+
+    df = build_product_forecast_dataset()
+
+    plt.figure(figsize=(10,6))
+
+    for product in df["product_name"].unique():
+
+        sub = df[df["product_name"] == product]
+
+        plt.plot(
+            sub["relative_week_index"],
+            sub["units_sold"],
+            label=f"{product} actual"
+        )
+
+        plt.plot(
+            sub["relative_week_index"],
+            sub["moving_avg"],
+            linestyle="--",
+            label=f"{product} MA forecast"
+        )
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units Sold")
+    plt.title("Moving Average Demand Forecast")
+
+    plt.legend()
+
+    path = FIGURES_DIR / "moving_average_forecast.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
+def plot_weekly_demand_distribution():
+
+    df = department_demand.copy()
+
+    weekly = df.groupby("relative_week_index")["units_sold"].sum()
+
+    plt.figure(figsize=(10,6))
+
+    plt.plot(weekly.index, weekly.values)
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units Sold")
+
+    plt.title("Weekly Demand Evolution")
+
+    path = FIGURES_DIR / "weekly_demand_evolution.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
+def detect_demand_anomalies():
+
+    df = department_demand.copy()
+
+    weekly = df.groupby("relative_week_index")["units_sold"].sum()
+
+    mean = weekly.mean()
+    std = weekly.std()
+
+    z_scores = (weekly - mean) / std
+
+    anomalies = weekly[abs(z_scores) > 3]
+
+    return weekly, anomalies
+
+def plot_demand_anomalies():
+
+    weekly, anomalies = detect_demand_anomalies()
+
+    plt.figure(figsize=(10,6))
+
+    plt.plot(weekly.index, weekly.values, label="Demand")
+
+    plt.scatter(
+        anomalies.index,
+        anomalies.values,
+        color="red",
+        label="Anomaly"
+    )
+
+    plt.title("Demand Anomaly Detection")
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units Sold")
+
+    plt.legend()
+
+    path = FIGURES_DIR / "demand_anomalies.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
+def compute_product_peak_weeks() -> pd.DataFrame:
+    df = product_demand.copy()
+
+    peak_df = (
+        df.sort_values(
+            ["product_id", "units_sold", "relative_week_index"],
+            ascending=[True, False, True]
+        )
+        .groupby("product_id", as_index=False)
+        .first()[["product_id", "product_name", "department", "relative_week_index", "units_sold"]]
+        .rename(columns={
+            "relative_week_index": "peak_relative_week",
+            "units_sold": "peak_units_sold"
+        })
+    )
+
+    return peak_df
+
+def compute_department_peak_weeks() -> pd.DataFrame:
+    df = department_demand.copy()
+
+    peak_df = (
+        df.sort_values(
+            ["department", "units_sold", "relative_week_index"],
+            ascending=[True, False, True]
+        )
+        .groupby("department", as_index=False)
+        .first()[["department", "relative_week_index", "units_sold"]]
+        .rename(columns={
+            "relative_week_index": "peak_relative_week",
+            "units_sold": "peak_units_sold"
+        })
+    )
+
+    return peak_df
+
+def compute_product_peak_weeks(exclude_week_zero: bool = True) -> pd.DataFrame:
+    df = product_demand.copy()
+
+    required_cols = {
+        "product_id",
+        "product_name",
+        "department",
+        "relative_week_index",
+        "units_sold",
+    }
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in product_demand: {sorted(missing)}")
+
+    df = df.dropna(subset=["product_id", "product_name", "relative_week_index", "units_sold"]).copy()
+    df["relative_week_index"] = pd.to_numeric(df["relative_week_index"], errors="coerce")
+    df["units_sold"] = pd.to_numeric(df["units_sold"], errors="coerce")
+    df = df.dropna(subset=["relative_week_index", "units_sold"]).copy()
+
+    if exclude_week_zero:
+        df = df[df["relative_week_index"] > 0].copy()
+
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                "product_id",
+                "product_name",
+                "department",
+                "peak_relative_week",
+                "peak_units_sold",
+            ]
+        )
+
+    peak_df = (
+        df.sort_values(
+            by=["product_id", "units_sold", "relative_week_index"],
+            ascending=[True, False, True],
+        )
+        .groupby("product_id", as_index=False)
+        .first()
+        .loc[:, ["product_id", "product_name", "department", "relative_week_index", "units_sold"]]
+        .rename(
+            columns={
+                "relative_week_index": "peak_relative_week",
+                "units_sold": "peak_units_sold",
+            }
+        )
+    )
+
+    peak_df["peak_relative_week"] = peak_df["peak_relative_week"].astype(int)
+    peak_df["peak_units_sold"] = peak_df["peak_units_sold"].astype(int)
+
+    return peak_df
+
+
+def compute_department_peak_weeks(exclude_week_zero: bool = True) -> pd.DataFrame:
+    df = department_demand.copy()
+
+    required_cols = {
+        "department",
+        "relative_week_index",
+        "units_sold",
+    }
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in department_demand: {sorted(missing)}")
+
+    df = df.dropna(subset=["department", "relative_week_index", "units_sold"]).copy()
+    df["relative_week_index"] = pd.to_numeric(df["relative_week_index"], errors="coerce")
+    df["units_sold"] = pd.to_numeric(df["units_sold"], errors="coerce")
+    df = df.dropna(subset=["relative_week_index", "units_sold"]).copy()
+
+    if exclude_week_zero:
+        df = df[df["relative_week_index"] > 0].copy()
+
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                "department",
+                "peak_relative_week",
+                "peak_units_sold",
+            ]
+        )
+
+    peak_df = (
+        df.sort_values(
+            by=["department", "units_sold", "relative_week_index"],
+            ascending=[True, False, True],
+        )
+        .groupby("department", as_index=False)
+        .first()
+        .loc[:, ["department", "relative_week_index", "units_sold"]]
+        .rename(
+            columns={
+                "relative_week_index": "peak_relative_week",
+                "units_sold": "peak_units_sold",
+            }
+        )
+    )
+
+    peak_df["peak_relative_week"] = peak_df["peak_relative_week"].astype(int)
+    peak_df["peak_units_sold"] = peak_df["peak_units_sold"].astype(int)
+
+    return peak_df
+
+def plot_product_peak_weeks() -> Path | None:
+    df = compute_product_peak_weeks(exclude_week_zero=True)
+
+    if df.empty:
+        print("No product peak-week data available after excluding week 0.")
+        return None
+
+    df = df.sort_values(["peak_relative_week", "peak_units_sold"], ascending=[True, False]).copy()
+
+    plt.figure(figsize=(11, 6))
+    bars = plt.barh(df["product_name"], df["peak_relative_week"])
+
+    max_week = int(df["peak_relative_week"].max()) if not df.empty else 1
+    label_offset = max(0.3, max_week * 0.01)
+
+    for bar, week, units in zip(bars, df["peak_relative_week"], df["peak_units_sold"]):
+        plt.text(
+            bar.get_width() + label_offset,
+            bar.get_y() + (bar.get_height() / 2),
+            f"W{int(week)} · {int(units):,}",
+            va="center",
+            fontsize=9,
+        )
+
+    plt.xlabel("Peak Relative Week")
+    plt.title("Peak Relative Week by Product (Excluding Week 0)")
+    plt.xlim(0, max_week + max(2, int(max_week * 0.12)))
+
+    path = FIGURES_DIR / "product_peak_weeks.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+
+def plot_department_peak_weeks() -> Path | None:
+    df = compute_department_peak_weeks(exclude_week_zero=True)
+
+    if df.empty:
+        print("No department peak-week data available after excluding week 0.")
+        return None
+
+    df = df.sort_values(["peak_relative_week", "peak_units_sold"], ascending=[True, False]).copy()
+
+    plt.figure(figsize=(11, 7))
+    bars = plt.barh(df["department"], df["peak_relative_week"])
+
+    max_week = int(df["peak_relative_week"].max()) if not df.empty else 1
+    label_offset = max(0.3, max_week * 0.01)
+
+    for bar, week, units in zip(bars, df["peak_relative_week"], df["peak_units_sold"]):
+        plt.text(
+            bar.get_width() + label_offset,
+            bar.get_y() + (bar.get_height() / 2),
+            f"W{int(week)} · {int(units):,}",
+            va="center",
+            fontsize=9,
+        )
+
+    plt.xlabel("Peak Relative Week")
+    plt.title("Peak Relative Week by Department (Excluding Week 0)")
+    plt.xlim(0, max_week + max(2, int(max_week * 0.12)))
+
+    path = FIGURES_DIR / "department_peak_weeks.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_department_peak_weeks():
+
+    df = compute_department_peak_weeks(exclude_week_zero=True)
+    df = df.sort_values("peak_relative_week", ascending=True)
+
+    if df.empty:
+        return None
+
+    plt.figure(figsize=(10, 6))
+    bars = plt.barh(df["department"], df["peak_relative_week"])
+
+    for bar, week, units in zip(bars, df["peak_relative_week"], df["peak_units_sold"]):
+        plt.text(
+            bar.get_width() + 0.3,
+            bar.get_y() + bar.get_height() / 2,
+            f"W{int(week)} · {int(units):,}",
+            va="center",
+            fontsize=9
+        )
+
+    plt.xlabel("Peak Relative Week")
+    plt.title("Peak Relative Week by Department (Excluding Week 0)")
+
+    path = FIGURES_DIR / "department_peak_weeks.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_weekly_demand_pattern():
+
+    df = department_demand.copy()
+
+    weekly = (
+        df.groupby("relative_week_index")["units_sold"]
+        .sum()
+        .reset_index()
+    )
+
+    weekly = weekly[weekly["relative_week_index"] > 0]
+
+    plt.figure(figsize=(10,6))
+
+    plt.plot(
+        weekly["relative_week_index"],
+        weekly["units_sold"],
+        marker="o"
+    )
+
+    for x, y in zip(weekly["relative_week_index"], weekly["units_sold"]):
+        if x % 4 == 0:
+            plt.axvline(x=x, linestyle="--", alpha=0.2)
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units Sold")
+    plt.title("Weekly Demand Pattern")
+
+    path = FIGURES_DIR / "weekly_demand_pattern.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
+def plot_replenishment_cycle():
+
+    df = department_demand.copy()
+
+    df = df[df["relative_week_index"] > 0]
+
+    df["cycle_week"] = df["relative_week_index"] % 4
+
+    cycle = (
+        df.groupby("cycle_week")["units_sold"]
+        .sum()
+        .reset_index()
+    )
+
+    plt.figure(figsize=(8,5))
+
+    plt.bar(
+        cycle["cycle_week"],
+        cycle["units_sold"]
+    )
+
+    plt.xlabel("Week in 4-Week Cycle")
+    plt.ylabel("Units Sold")
+    plt.title("4-Week Replenishment Cycle Pattern")
+
+    path = FIGURES_DIR / "replenishment_cycle_pattern.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
+def plot_product_week_heatmap():
+
+    df = product_demand.copy()
+
+    pivot = df.pivot_table(
+        index="product_name",
+        columns="relative_week_index",
+        values="units_sold",
+        aggfunc="sum"
+    )
+
+    pivot = pivot.fillna(0)
+
+    plt.figure(figsize=(12,6))
+
+    plt.imshow(pivot, aspect="auto")
+
+    plt.colorbar(label="Units Sold")
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Product")
+
+    plt.title("Product Demand Heatmap")
+
+    path = FIGURES_DIR / "product_demand_heatmap.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
 def generate_html_report(image_paths: list[Path]) -> Path:
     html_path = REPORT_DIR / "demand_forecasting_report.html"
 
@@ -182,6 +663,15 @@ def generate_html_report(image_paths: list[Path]) -> Path:
         "department_demand_trends": "Compares weekly unit demand across departments to highlight broader category-level trends.",
         "top_products_total_demand": "Ranks the selected products by total units sold across the available weekly history.",
         "top_departments_total_demand": "Ranks departments by total units sold to highlight the strongest contributors to demand volume.",
+        "moving_average_forecast": "Applies a 4-week moving average to product demand trends to provide a simple baseline forecast for future demand.",
+        "weekly_demand_evolution": "Displays the distribution of weekly demand across all products and departments.",
+        "demand_anomalies": "Identifies weeks where total demand significantly deviated from the average, which may indicate anomalies or special events.",
+        "product_peak_weeks": "Shows the reconstructed relative week in which each selected product reaches its highest observed demand, excluding week 0 to reduce cohort alignment bias.",
+        "department_peak_weeks": "Shows the reconstructed relative week in which each department reaches its highest observed demand, excluding week 0 to reduce cohort alignment bias.",
+        "weekly_demand_pattern": "Displays the overall weekly demand pattern across all products and departments.",
+        "replenishment_cycle_pattern": "Shows the 4-week replenishment cycle pattern across all products and departments.",
+        "product_demand_heatmap": "Visualizes the demand for each product across different weeks using a heatmap."
+
     }
 
     cards_html = f"""
@@ -254,6 +744,14 @@ def generate_html_report(image_paths: list[Path]) -> Path:
         "department_demand_trends",
         "top_products_total_demand",
         "top_departments_total_demand",
+        "moving_average_forecast",
+        "weekly_demand_evolution",
+        "demand_anomalies",
+        "product_peak_weeks",
+        "department_peak_weeks",
+        "weekly_demand_pattern",
+        "replenishment_cycle_pattern",
+        "product_demand_heatmap",
     ]
 
     image_map = {path.stem: path for path in image_paths}
@@ -496,30 +994,39 @@ def generate_html_report(image_paths: list[Path]) -> Path:
             {''.join(image_blocks)}
         </section>
 
-        <div class="container">
-            <section class="interpretation-card">
-            <h2 class="section-title">How to Interpret These Results</h2>
+        <section class="interpretation-card">
+        <h2 class="section-title">How to Interpret These Results</h2>
 
-                <p>
-                <strong>Relative Week Index</strong> represents a reconstructed weekly position in each customer's order journey,
-                not a true shared calendar week. This means week-level comparisons reflect aligned customer progression rather
-                than real-world seasonality.
-                </p>
+            <p>
+            <strong>Relative Week Index</strong> represents a reconstructed weekly position in each customer's order journey,
+            not a true shared calendar week. This means week-level comparisons reflect aligned customer progression rather
+            than real-world seasonality.
+            </p>
 
-                <p>
-                <strong>Units Sold</strong> measures the total number of product rows observed in weekly order activity.
-                </p>
+            <p>
+            <strong>Units Sold</strong> measures the total number of product rows observed in weekly order activity.
+            </p>
 
-                <p>
-                <strong>Orders Count</strong> counts distinct orders containing a product or department during a given relative week.
-                </p>
+            <p>
+            <strong>Orders Count</strong> counts distinct orders containing a product or department during a given relative week.
+            </p>
 
-                <p>
-                These demand trends provide a stable baseline for future forecasting methods such as moving averages,
-                ARIMA, or Prophet.
-                </p>
-            </section>
-        </div>
+            <p>
+            <strong>Peak Relative Week</strong> indicates the reconstructed week in which a product or department reaches
+            its highest observed demand within the relative customer timeline. It does not represent a true calendar
+            week of the year.
+            </p>
+
+            <p>
+            <strong>Week 0 Exclusion</strong> removes the cohort-aligned starting week shared by nearly all customers,
+            which otherwise dominates the relative timeline and can hide more meaningful later demand peaks.
+            </p>
+
+            <p>
+            These demand trends provide a stable baseline for future forecasting methods such as moving averages,
+            ARIMA, or Prophet.
+            </p>
+        </section>
 
         <div class="footer">
             Retail Analytic Platform · Demand Forecasting
@@ -568,6 +1075,21 @@ def main():
     generated_files.append(plot_department_demand_trends())
     generated_files.append(plot_top_products())
     generated_files.append(plot_top_departments())
+    generated_files.append(plot_product_forecast())
+    generated_files.append(plot_weekly_demand_distribution())
+    generated_files.append(plot_demand_anomalies())
+
+    product_peak_chart = plot_product_peak_weeks()
+    if product_peak_chart is not None:
+        generated_files.append(product_peak_chart)
+
+    department_peak_chart = plot_department_peak_weeks()
+    if department_peak_chart is not None:
+        generated_files.append(department_peak_chart)
+
+    generated_files.append(plot_weekly_demand_pattern())
+    generated_files.append(plot_replenishment_cycle())
+    generated_files.append(plot_product_week_heatmap())
 
     html_report = generate_html_report(generated_files)
 
