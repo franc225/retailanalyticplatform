@@ -178,18 +178,6 @@ JOIN mart.dim_product p1
 JOIN mart.dim_product p2
     ON ar.product_2 = p2.product_id;
 
-CREATE OR REPLACE VIEW mart.v_customer_metrics AS
-SELECT
-    customer_id,
-    COUNT(DISTINCT order_id) AS total_orders,
-    COUNT(*) AS total_items,
-    AVG(basket_size) AS avg_basket_size,
-    SUM(reordered) AS total_reordered_items,
-    AVG(days_since_prior_order) AS avg_days_between_orders,
-    MAX(order_number) AS last_order_number
-FROM mart.fact_order_items
-GROUP BY customer_id;
-
 CREATE OR REPLACE VIEW mart.v_customer_reorder AS
 SELECT
     customer_id,
@@ -245,3 +233,125 @@ GROUP BY
     co.customer_id,
     ci.total_items,
     ci.total_reordered_items;
+
+CREATE OR REPLACE VIEW mart.v_product_demand_weekly AS
+SELECT
+    f.relative_week_index,
+    f.product_id,
+    p.product_name,
+    p.department,
+    COUNT(DISTINCT f.order_id) AS orders_count,
+    COUNT(*) AS units_sold
+FROM mart.fact_order_items f
+INNER JOIN mart.dim_product p
+    ON f.product_id = p.product_id
+GROUP BY
+    f.relative_week_index,
+    f.product_id,
+    p.product_name,
+    p.department;
+
+CREATE OR REPLACE VIEW mart.v_top_product_demand_weekly AS
+WITH ranked_products AS (
+    SELECT
+        product_id,
+        SUM(units_sold) AS total_units_sold
+    FROM mart.v_product_demand_weekly
+    GROUP BY product_id
+    ORDER BY total_units_sold DESC
+    LIMIT 20
+)
+SELECT
+    v.relative_week_index,
+    v.product_id,
+    v.product_name,
+    v.department,
+    v.orders_count,
+    v.units_sold
+FROM mart.v_product_demand_weekly v
+INNER JOIN ranked_products rp
+    ON v.product_id = rp.product_id;
+
+CREATE OR REPLACE VIEW mart.v_department_demand_weekly AS
+SELECT
+    f.relative_week_index,
+    p.department,
+    COUNT(DISTINCT f.order_id) AS orders_count,
+    COUNT(*) AS units_sold
+FROM mart.fact_order_items f
+INNER JOIN mart.dim_product p
+    ON f.product_id = p.product_id
+GROUP BY
+    f.relative_week_index,
+    p.department;
+
+CREATE OR REPLACE VIEW mart.v_top_department_demand_weekly AS
+WITH ranked_departments AS (
+    SELECT
+        department,
+        SUM(units_sold) AS total_units_sold
+    FROM mart.v_department_demand_weekly
+    GROUP BY department
+    ORDER BY total_units_sold DESC
+    LIMIT 10
+)
+SELECT
+    v.relative_week_index,
+    v.department,
+    v.orders_count,
+    v.units_sold
+FROM mart.v_department_demand_weekly v
+INNER JOIN ranked_departments rd
+    ON v.department = rd.department;
+
+CREATE OR REPLACE TABLE mart.export_top_product_demand_weekly AS
+WITH top_products AS (
+    SELECT
+        f.product_id
+    FROM mart.fact_order_items f
+    GROUP BY f.product_id
+    ORDER BY COUNT(*) DESC
+    LIMIT 5
+),
+recent_weeks AS (
+    SELECT MAX(relative_week_index) AS max_week
+    FROM mart.fact_order_items
+)
+SELECT
+    f.relative_week_index,
+    f.product_id,
+    p.product_name,
+    p.department,
+    COUNT(DISTINCT f.order_id) AS orders_count,
+    COUNT(*) AS units_sold
+FROM mart.fact_order_items f
+INNER JOIN top_products tp
+    ON f.product_id = tp.product_id
+INNER JOIN mart.dim_product p
+    ON f.product_id = p.product_id
+CROSS JOIN recent_weeks rw
+WHERE f.relative_week_index >= rw.max_week - 52
+GROUP BY
+    f.relative_week_index,
+    f.product_id,
+    p.product_name,
+    p.department;
+
+CREATE OR REPLACE TABLE mart.export_department_demand_weekly AS
+WITH recent_weeks AS (
+    SELECT MAX(relative_week_index) AS max_week
+    FROM mart.fact_order_items
+)
+SELECT
+    f.relative_week_index,
+    p.department,
+    COUNT(DISTINCT f.order_id) AS orders_count,
+    COUNT(*) AS units_sold
+FROM mart.fact_order_items f
+INNER JOIN mart.dim_product p
+    ON f.product_id = p.product_id
+CROSS JOIN recent_weeks rw
+WHERE f.relative_week_index >= rw.max_week - 52
+GROUP BY
+    f.relative_week_index,
+    p.department;

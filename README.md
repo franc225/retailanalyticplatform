@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-orange)
 ![Dataset](https://img.shields.io/badge/Data-Kaggle-green)
-![Status](https://img.shields.io/badge/Stage-Customer%20Analytics-brightgreen)
+![Status](https://img.shields.io/badge/Stage-Demand%20Forecasting-brightgreen)
 
 Retail analytics project based on the Instacart Market Basket dataset.
 
@@ -59,7 +59,9 @@ Market Basket Analysis
       ↓
 Customer Analytics
       ↓
-Forecasting
+Demand Trend Analysis
+      ↓
+Forecasting (Phase 1)
 ```
 
 ## Data Model
@@ -152,6 +154,58 @@ Customer analytics visualizations include:
 - basket size distribution
 
 The results are exported as CSV datasets and visualized using Python and Matplotlib.
+
+## Demand Forecasting
+
+The demand forecasting module introduces time-based demand trend analysis
+using a reconstructed temporal axis derived from customer order sequences.
+
+Because the Instacart dataset does not contain a true calendar date,
+a **relative time index** was created using the `days_since_prior_order`
+field to reconstruct a chronological order timeline.
+
+This enables time-based demand analysis without relying on explicit dates.
+
+### Relative Time Model
+
+Orders are enriched with:
+
+- `relative_day_index`
+- `relative_week_index`
+
+These fields represent the reconstructed timeline of customer activity.
+
+The relative time model allows:
+
+- weekly demand trend analysis
+- product demand evolution
+- department demand comparison
+- baseline demand forecasting preparation
+
+### Demand Trend Datasets
+
+The following analytical datasets are generated:
+
+- weekly product demand
+- weekly department demand
+
+These datasets are exported from DuckDB and visualized using Python.
+
+### Visualizations
+
+Demand trend visualizations include:
+
+- product demand trends
+- department demand trends
+- top products by total demand
+- top departments by total demand
+
+These visualizations help identify:
+
+- high-demand products
+- dominant departments
+- long-term demand patterns
+- relative weekly demand distribution
 
 ## Star schema
 
@@ -290,6 +344,24 @@ Customer Analytics Report
 └── Basket Size Distribution
 ```
 
+## Demand Forecasting Report
+
+An automated HTML report is generated from the forecasting pipeline.
+
+The report includes:
+
+- demand trend KPIs
+- product demand evolution
+- department demand comparison
+- demand distribution insights
+
+Features:
+
+- KPI summary
+- visualization grid
+- interactive image zoom
+- responsive layout
+
 ## Current Progress
 
 Completed:
@@ -324,6 +396,13 @@ Customer analytics
 - customer segmentation
 - automated HTML report with behavioral insights
 
+Demand forecasting (phase 1)
+- reconstructed relative time index
+- weekly product demand aggregation
+- weekly department demand aggregation
+- demand trend visualizations
+- automated HTML demand forecasting report
+
 ## Repository Structure
 
 ```text
@@ -343,26 +422,35 @@ retail-analytic-platform
 │
 ├── analytics
 │   ├── validation.sql
-│   └── export_views.sql
-│   └── retail_visualizations.py
-│   └── market_basket_visualizations.py
-|
+│   ├── export_views.sql
+│   ├── retail_visualizations.py
+│   ├── market_basket_visualizations.py
+│   ├── customer_visualizations.py
+│   └── demand_forecasting_visualizations.py
+│
 ├── reports
 │   ├── figures
 │   ├── retail_analytics_report.html
 │   ├── market_basket_report.html
-│   └── customer_analytics_report.html
+│   ├── customer_analytics_report.html
+│   └── demand_forecasting_report.html
 │
 ├── notebooks
 │
 └── README.md
 ```
 
-## Planned Analyses
+## Future Improvements
 
-- Demand Forecasting
-      - product demand forecasting
-      - department demand trends
+Future enhancements planned for the forecasting module include:
+
+- statistical forecasting models
+    - moving average baseline
+    - ARIMA models
+    - Prophet forecasting
+- demand anomaly detection
+- seasonal demand analysis
+- product-level forecast visualization
 	
 ## Technologies
 

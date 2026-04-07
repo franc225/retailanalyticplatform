@@ -74,3 +74,23 @@ COPY (
 )
 TO 'data/exports/customer_metrics.csv'
 (HEADER, DELIMITER ',');
+
+COPY (
+    SELECT *
+    FROM mart.v_department_demand_weekly
+) TO 'data/exports/department_demand_timeseries.csv'
+WITH (HEADER, DELIMITER ',');
+
+COPY (
+    SELECT *
+    FROM mart.v_top_product_demand_weekly
+) TO 'data/exports/top_product_demand_timeseries.csv'
+WITH (HEADER, DELIMITER ',');
+
+COPY mart.export_top_product_demand_weekly
+TO 'data/exports/top_product_demand_timeseries.parquet'
+(FORMAT PARQUET);
+
+COPY mart.export_department_demand_weekly
+TO 'data/exports/department_demand_timeseries.parquet'
+(FORMAT PARQUET);

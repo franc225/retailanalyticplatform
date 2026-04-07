@@ -73,25 +73,77 @@ SELECT
 FROM staging_order_items
 GROUP BY order_id;
 
+CREATE OR REPLACE TABLE mart.orders_enriched AS
+WITH ordered_orders AS (
+    SELECT
+        o.order_id,
+        o.user_id AS customer_id,
+        o.order_number,
+        CAST(o.order_dow AS INTEGER) AS order_dow,
+        CAST(o.order_hour_of_day AS INTEGER) AS order_hour_of_day,
+        CAST(o.days_since_prior_order AS DOUBLE) AS days_since_prior_order,
+        o.eval_set,
+        COALESCE(
+            SUM(COALESCE(o.days_since_prior_order, 0)) OVER (
+                PARTITION BY o.user_id
+                ORDER BY o.order_number
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            ),
+            0
+        ) AS relative_day_index
+    FROM orders o
+)
+SELECT
+    order_id,
+    customer_id,
+    order_number,
+    order_dow,
+    order_hour_of_day,
+    days_since_prior_order,
+    eval_set,
+    CAST(relative_day_index AS INTEGER) AS relative_day_index,
+    CAST(FLOOR(relative_day_index / 7) AS INTEGER) AS relative_week_index
+FROM ordered_orders;
+
+CREATE OR REPLACE TABLE mart.dim_relative_time AS
+SELECT DISTINCT
+    relative_day_index AS relative_time_id,
+    relative_day_index,
+    relative_week_index,
+    (relative_day_index % 7) AS relative_day_of_week,
+    CASE (relative_day_index % 7)
+        WHEN 0 THEN 'Day 0'
+        WHEN 1 THEN 'Day 1'
+        WHEN 2 THEN 'Day 2'
+        WHEN 3 THEN 'Day 3'
+        WHEN 4 THEN 'Day 4'
+        WHEN 5 THEN 'Day 5'
+        WHEN 6 THEN 'Day 6'
+    END AS relative_day_label
+FROM mart.orders_enriched;
+
 CREATE OR REPLACE TABLE mart.fact_order_items AS
 SELECT
     op.order_id,
-    o.user_id AS customer_id,
+    oe.customer_id,
     op.product_id,
-    CAST(o.order_dow AS INTEGER) AS order_day_id,
-    CAST(o.order_hour_of_day AS INTEGER) AS order_time_id,
-    o.order_number,
-    CAST(o.days_since_prior_order AS DOUBLE) AS days_since_prior_order,
-    o.eval_set,
+    CAST(oe.order_dow AS INTEGER) AS order_day_id,
+    CAST(oe.order_hour_of_day AS INTEGER) AS order_time_id,
+    oe.relative_day_index AS relative_time_id,
+    oe.relative_day_index,
+    oe.relative_week_index,
+    oe.order_number,
+    oe.days_since_prior_order,
+    oe.eval_set,
     COALESCE(obs.basket_size, 0) AS basket_size,
     op.add_to_cart_order,
     op.reordered,
     CASE
-        WHEN CAST(o.order_dow AS INTEGER) IN (0, 6) THEN TRUE
+        WHEN CAST(oe.order_dow AS INTEGER) IN (0, 6) THEN TRUE
         ELSE FALSE
     END AS is_weekend
 FROM staging_order_items op
-INNER JOIN orders o
-    ON op.order_id = o.order_id
+INNER JOIN mart.orders_enriched oe
+    ON op.order_id = oe.order_id
 LEFT JOIN mart.order_basket_size obs
     ON op.order_id = obs.order_id;
