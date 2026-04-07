@@ -1,5 +1,9 @@
 from pathlib import Path
 from datetime import datetime
+from statsmodels.graphics.tsaplots import plot_acf
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.seasonal import STL
+from prophet import Prophet
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -13,6 +17,22 @@ FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 product_demand = pd.read_parquet(EXPORT_DIR / "top_product_demand_timeseries.parquet")
 department_demand = pd.read_parquet(EXPORT_DIR / "department_demand_timeseries.parquet")
+
+reorder_intervals = pd.read_csv(
+    EXPORT_DIR / "reorder_intervals.csv"
+)
+
+customer_reorder = pd.read_csv(
+    EXPORT_DIR / "customer_reorder_behavior.csv"
+)
+
+customer_lifetime_curve = pd.read_csv(
+    EXPORT_DIR / "customer_lifetime_curve.csv"
+)
+
+customer_reorder_cohorts = pd.read_csv(
+    EXPORT_DIR / "customer_reorder_cohorts.csv"
+)
 
 def plot_product_demand_trends():
 
@@ -602,6 +622,758 @@ def plot_product_week_heatmap():
 
     return path
 
+def plot_demand_acf():
+
+    df = department_demand.copy()
+
+    weekly = (
+        df.groupby("relative_week_index")["units_sold"]
+        .sum()
+        .sort_index()
+    )
+
+    weekly = weekly[weekly.index > 0]
+
+    plt.figure(figsize=(10,6))
+
+    plot_acf(
+        weekly,
+        lags=20,
+        alpha=0.05
+    )
+
+    plt.title("Demand Autocorrelation (ACF)")
+
+    path = FIGURES_DIR / "demand_acf.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
+def plot_arima_forecast():
+
+    df = department_demand.copy()
+
+    weekly = (
+        df.groupby("relative_week_index")["units_sold"]
+        .sum()
+        .sort_index()
+    )
+
+    # Exclure la semaine 0 si tu veux rester cohérent avec le reste du rapport
+    weekly = weekly[weekly.index > 0]
+
+    # Garder l'index relatif original pour l'affichage
+    original_index = weekly.index.to_list()
+
+    # Remplacer l'index par un RangeIndex supporté par statsmodels
+    weekly_reset = pd.Series(
+        weekly.values,
+        index=pd.RangeIndex(start=0, stop=len(weekly), step=1),
+        name="units_sold"
+    )
+
+    model = ARIMA(weekly_reset, order=(1, 1, 1))
+    fitted = model.fit()
+
+    forecast_steps = 12
+    forecast = fitted.forecast(steps=forecast_steps)
+
+    # Reconstruire un axe futur en semaines relatives
+    last_relative_week = int(max(original_index))
+    future_relative_index = list(
+        range(last_relative_week + 1, last_relative_week + 1 + forecast_steps)
+    )
+
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(
+        original_index,
+        weekly.values,
+        label="Actual"
+    )
+
+    plt.plot(
+        future_relative_index,
+        forecast.values,
+        linestyle="--",
+        label="ARIMA forecast"
+    )
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units Sold")
+    plt.title("ARIMA Demand Forecast")
+    plt.legend()
+
+    path = FIGURES_DIR / "arima_forecast.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def build_product_series(product_name: str, exclude_week_zero: bool = True) -> pd.Series:
+    df = product_demand.copy()
+
+    required_cols = {"product_name", "relative_week_index", "units_sold"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in product_demand: {sorted(missing)}")
+
+    df = df[df["product_name"] == product_name].copy()
+
+    df["relative_week_index"] = pd.to_numeric(df["relative_week_index"], errors="coerce")
+    df["units_sold"] = pd.to_numeric(df["units_sold"], errors="coerce")
+    df = df.dropna(subset=["relative_week_index", "units_sold"]).copy()
+
+    if exclude_week_zero:
+        df = df[df["relative_week_index"] > 0].copy()
+
+    weekly = (
+        df.groupby("relative_week_index")["units_sold"]
+        .sum()
+        .sort_index()
+    )
+
+    return weekly
+
+def plot_product_series(product_name: str = "Banana") -> Path | None:
+    weekly = build_product_series(product_name=product_name, exclude_week_zero=True)
+
+    if weekly.empty or len(weekly) < 8:
+        print(f"Not enough data for product series: {product_name}")
+        return None
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(weekly.index, weekly.values, marker="o")
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units Sold")
+    plt.title(f"Weekly Demand Series - {product_name}")
+
+    path = FIGURES_DIR / f"product_series_{product_name.lower().replace(' ', '_')}.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def build_normalized_department_series(exclude_week_zero: bool = True) -> pd.Series:
+    df = department_demand.copy()
+
+    required_cols = {"relative_week_index", "units_sold", "orders_count"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in department_demand: {sorted(missing)}")
+
+    df["relative_week_index"] = pd.to_numeric(df["relative_week_index"], errors="coerce")
+    df["units_sold"] = pd.to_numeric(df["units_sold"], errors="coerce")
+    df["orders_count"] = pd.to_numeric(df["orders_count"], errors="coerce")
+    df = df.dropna(subset=["relative_week_index", "units_sold", "orders_count"]).copy()
+
+    if exclude_week_zero:
+        df = df[df["relative_week_index"] > 0].copy()
+
+    weekly = (
+        df.groupby("relative_week_index")[["units_sold", "orders_count"]]
+        .sum()
+        .reset_index()
+    )
+
+    weekly = weekly[weekly["orders_count"] > 0].copy()
+    weekly["units_per_order"] = weekly["units_sold"] / weekly["orders_count"]
+
+    series = weekly.set_index("relative_week_index")["units_per_order"].sort_index()
+
+    return series
+
+def plot_normalized_department_series() -> Path | None:
+    weekly = build_normalized_department_series(exclude_week_zero=True)
+
+    if weekly.empty or len(weekly) < 8:
+        print("Not enough data for normalized department series.")
+        return None
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(weekly.index, weekly.values, marker="o")
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units per Order")
+    plt.title("Normalized Department Demand Series")
+
+    path = FIGURES_DIR / "normalized_department_series.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_arima_product_forecast(product_name: str = "Banana", order: tuple = (1, 1, 1)) -> Path | None:
+    weekly = build_product_series(product_name=product_name, exclude_week_zero=True)
+
+    if weekly.empty or len(weekly) < 12:
+        print(f"Not enough data for ARIMA product forecast: {product_name}")
+        return None
+
+    original_index = weekly.index.to_list()
+
+    weekly_reset = pd.Series(
+        weekly.values,
+        index=pd.RangeIndex(start=0, stop=len(weekly), step=1),
+        name="units_sold"
+    )
+
+    model = ARIMA(weekly_reset, order=order)
+    fitted = model.fit()
+
+    forecast_steps = 12
+    forecast = fitted.forecast(steps=forecast_steps)
+
+    last_relative_week = int(max(original_index))
+    future_relative_index = list(
+        range(last_relative_week + 1, last_relative_week + 1 + forecast_steps)
+    )
+
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(
+        original_index,
+        weekly.values,
+        label="Actual"
+    )
+
+    plt.plot(
+        future_relative_index,
+        forecast.values,
+        linestyle="--",
+        label="ARIMA forecast"
+    )
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units Sold")
+    plt.title(f"ARIMA Forecast - {product_name}")
+    plt.legend()
+
+    path = FIGURES_DIR / f"arima_forecast_{product_name.lower().replace(' ', '_')}.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_arima_normalized_department_forecast(order: tuple = (1, 1, 1)) -> Path | None:
+    weekly = build_normalized_department_series(exclude_week_zero=True)
+
+    if weekly.empty or len(weekly) < 12:
+        print("Not enough data for ARIMA normalized department forecast.")
+        return None
+
+    original_index = weekly.index.to_list()
+
+    weekly_reset = pd.Series(
+        weekly.values,
+        index=pd.RangeIndex(start=0, stop=len(weekly), step=1),
+        name="units_per_order"
+    )
+
+    model = ARIMA(weekly_reset, order=order)
+    fitted = model.fit()
+
+    forecast_steps = 12
+    forecast = fitted.forecast(steps=forecast_steps)
+
+    last_relative_week = int(max(original_index))
+    future_relative_index = list(
+        range(last_relative_week + 1, last_relative_week + 1 + forecast_steps)
+    )
+
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(
+        original_index,
+        weekly.values,
+        label="Actual"
+    )
+
+    plt.plot(
+        future_relative_index,
+        forecast.values,
+        linestyle="--",
+        label="ARIMA forecast"
+    )
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Units per Order")
+    plt.title("ARIMA Forecast - Normalized Department Demand")
+    plt.legend()
+
+    path = FIGURES_DIR / "arima_forecast_normalized_department.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_stl_decomposition(period: int = 4) -> Path | None:
+
+    series = build_normalized_department_series(exclude_week_zero=True)
+
+    if len(series) < period * 2:
+        print("Not enough data for STL decomposition")
+        return None
+
+    stl = STL(series, period=period)
+    result = stl.fit()
+
+    fig = result.plot()
+
+    fig.set_size_inches(10, 8)
+
+    path = FIGURES_DIR / "stl_decomposition.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150)
+    plt.close()
+
+    return path
+
+def plot_reorder_interval_distribution():
+
+    df = reorder_intervals.copy()
+
+    df["days_since_prior_order"] = pd.to_numeric(
+        df["days_since_prior_order"],
+        errors="coerce"
+    )
+
+    df = df.dropna()
+
+    plt.figure(figsize=(10,6))
+
+    plt.hist(
+        df["days_since_prior_order"],
+        bins=30
+    )
+
+    plt.xlabel("Days Since Prior Order")
+    plt.ylabel("Frequency")
+
+    plt.title("Reorder Interval Distribution")
+
+    path = FIGURES_DIR / "reorder_interval_distribution.png"
+
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+
+    return path
+
+def build_customer_reorder_segments(customer_reorder: pd.DataFrame) -> pd.DataFrame:
+    df = customer_reorder.copy()
+
+    required_cols = {"user_id", "avg_reorder_days", "total_orders"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in customer_reorder: {sorted(missing)}")
+
+    df["avg_reorder_days"] = pd.to_numeric(df["avg_reorder_days"], errors="coerce")
+    df["total_orders"] = pd.to_numeric(df["total_orders"], errors="coerce")
+    df = df.dropna(subset=["avg_reorder_days", "total_orders"]).copy()
+
+    def assign_segment(x: float) -> str:
+        if x <= 8:
+            return "Weekly Shoppers"
+        elif x <= 16:
+            return "Bi-Weekly Shoppers"
+        elif x < 30:
+            return "Monthly Shoppers"
+        else:
+            return "Long-Interval Shoppers"
+
+    df["reorder_segment"] = df["avg_reorder_days"].apply(assign_segment)
+
+    segment_summary = (
+        df.groupby("reorder_segment")
+        .agg(
+            customers=("user_id", "count"),
+            avg_reorder_days=("avg_reorder_days", "mean"),
+            avg_total_orders=("total_orders", "mean"),
+        )
+        .reset_index()
+    )
+
+    total_customers = segment_summary["customers"].sum()
+    segment_summary["customer_share_pct"] = (
+        segment_summary["customers"] / total_customers * 100
+    ).round(1)
+
+    order_map = {
+        "Weekly Shoppers": 0,
+        "Bi-Weekly Shoppers": 1,
+        "Monthly Shoppers": 2,
+        "Long-Interval Shoppers": 3,
+    }
+    segment_summary["sort_order"] = segment_summary["reorder_segment"].map(order_map)
+    segment_summary = segment_summary.sort_values("sort_order").drop(columns="sort_order")
+
+    return segment_summary
+
+def plot_customer_reorder_segmentation(customer_reorder: pd.DataFrame) -> Path | None:
+    segment_summary = build_customer_reorder_segments(customer_reorder)
+
+    if segment_summary.empty:
+        print("No customer reorder segmentation data available.")
+        return None
+
+    plt.figure(figsize=(10, 6))
+    bars = plt.barh(
+        segment_summary["reorder_segment"],
+        segment_summary["customers"]
+    )
+
+    for bar, pct, avg_days in zip(
+        bars,
+        segment_summary["customer_share_pct"],
+        segment_summary["avg_reorder_days"]
+    ):
+        plt.text(
+            bar.get_width() * 1.01,
+            bar.get_y() + bar.get_height() / 2,
+            f"{pct:.1f}% · avg {avg_days:.1f}d",
+            va="center",
+            fontsize=9
+        )
+
+    plt.xlabel("Customers")
+    plt.title("Customer Reorder Segmentation")
+
+    path = FIGURES_DIR / "customer_reorder_segmentation.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_customer_lifetime_ordering_curve(customer_lifetime_curve: pd.DataFrame) -> Path | None:
+    df = customer_lifetime_curve.copy()
+
+    required_cols = {"relative_week_index", "active_customers"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in customer_lifetime_curve: {sorted(missing)}")
+
+    df["relative_week_index"] = pd.to_numeric(df["relative_week_index"], errors="coerce")
+    df["active_customers"] = pd.to_numeric(df["active_customers"], errors="coerce")
+    df = df.dropna(subset=["relative_week_index", "active_customers"]).copy()
+    df = df.sort_values("relative_week_index")
+
+    if df.empty:
+        print("No customer lifetime curve data available.")
+        return None
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        df["relative_week_index"],
+        df["active_customers"],
+        marker="o"
+    )
+
+    plt.xlabel("Relative Week")
+    plt.ylabel("Active Customers")
+    plt.title("Customer Lifetime Ordering Curve")
+
+    path = FIGURES_DIR / "customer_lifetime_ordering_curve.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_reorder_interval_distribution_capped(reorder_intervals: pd.DataFrame) -> Path | None:
+    df = reorder_intervals.copy()
+
+    if "days_since_prior_order" not in df.columns:
+        raise ValueError("Missing column: days_since_prior_order")
+
+    df["days_since_prior_order"] = pd.to_numeric(
+        df["days_since_prior_order"],
+        errors="coerce"
+    )
+    df = df.dropna(subset=["days_since_prior_order"]).copy()
+
+    if df.empty:
+        print("No reorder interval data available.")
+        return None
+
+    plt.figure(figsize=(10, 6))
+
+    plt.hist(
+        df["days_since_prior_order"],
+        bins=30
+    )
+
+    plt.axvline(
+        x=30,
+        linestyle="--",
+        linewidth=2
+    )
+
+    ymax = plt.gca().get_ylim()[1]
+
+    plt.text(
+        30.2,
+        ymax * 0.92,
+        "30-day cap\n(values above 30 are truncated)",
+        va="top",
+        fontsize=9
+    )
+
+    plt.xlabel("Days Since Prior Order")
+    plt.ylabel("Frequency")
+    plt.title("Reorder Interval Distribution (with 30-Day Cap)")
+
+    path = FIGURES_DIR / "reorder_interval_distribution_capped.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_reorder_interval_cdf(reorder_intervals: pd.DataFrame) -> Path | None:
+    df = reorder_intervals.copy()
+
+    if "days_since_prior_order" not in df.columns:
+        raise ValueError("Missing column: days_since_prior_order")
+
+    df["days_since_prior_order"] = pd.to_numeric(
+        df["days_since_prior_order"],
+        errors="coerce"
+    )
+    df = df.dropna(subset=["days_since_prior_order"]).copy()
+
+    if df.empty:
+        print("No reorder interval data available.")
+        return None
+
+    values = df["days_since_prior_order"].sort_values().reset_index(drop=True)
+    cdf = (values.index + 1) / len(values)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(values, cdf)
+
+    plt.axvline(
+        x=30,
+        linestyle="--",
+        linewidth=2
+    )
+
+    plt.text(
+        30.2,
+        0.9,
+        "30-day cap",
+        va="top",
+        fontsize=9
+    )
+
+    plt.xlabel("Days Since Prior Order")
+    plt.ylabel("Cumulative Share")
+    plt.title("Cumulative Reorder Interval Distribution")
+
+    path = FIGURES_DIR / "reorder_interval_cdf.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_reorder_survival_curve(reorder_intervals):
+
+    import numpy as np
+
+    df = reorder_intervals.copy()
+
+    days = np.sort(df["days_since_prior_order"].dropna())
+
+    survival = 1 - np.arange(len(days)) / len(days)
+
+    fig, ax = plt.subplots(figsize=(10,6))
+
+    ax.step(days, survival)
+
+    ax.axvline(30, linestyle="--")
+
+    ax.set_title("Reorder Survival Curve")
+    ax.set_xlabel("Days Since Prior Order")
+    ax.set_ylabel("Probability of Reordering Later")
+
+    fig.tight_layout()
+
+    output = FIGURES_DIR / "reorder_survival_curve.png"
+    fig.savefig(output, dpi=150)
+    plt.close()
+
+    return output
+
+def plot_customer_reorder_cohorts(customer_reorder_cohorts: pd.DataFrame) -> Path | None:
+    df = customer_reorder_cohorts.copy()
+
+    required_cols = {"cohort_week", "cohort_age", "active_customers"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in customer_reorder_cohorts: {sorted(missing)}")
+
+    df["cohort_week"] = pd.to_numeric(df["cohort_week"], errors="coerce")
+    df["cohort_age"] = pd.to_numeric(df["cohort_age"], errors="coerce")
+    df["active_customers"] = pd.to_numeric(df["active_customers"], errors="coerce")
+    df = df.dropna(subset=["cohort_week", "cohort_age", "active_customers"]).copy()
+
+    if df.empty:
+        print("No customer reorder cohort data available.")
+        return None
+
+    cohort_sizes = (
+        df[df["cohort_age"] == 0][["cohort_week", "active_customers"]]
+        .rename(columns={"active_customers": "cohort_size"})
+    )
+
+    df = df.merge(cohort_sizes, on="cohort_week", how="left")
+    df["retention_rate"] = df["active_customers"] / df["cohort_size"]
+
+    pivot = df.pivot_table(
+        index="cohort_week",
+        columns="cohort_age",
+        values="retention_rate",
+        aggfunc="mean"
+    ).fillna(0)
+
+    plt.figure(figsize=(12, 7))
+    plt.imshow(pivot, aspect="auto")
+    plt.colorbar(label="Retention Rate")
+
+    plt.xlabel("Weeks Since First Observed Order")
+    plt.ylabel("Cohort Start Week")
+    plt.title("Customer Reorder Cohorts")
+
+    path = FIGURES_DIR / "customer_reorder_cohorts.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_product_demand_seasonality_index(period: int = 4) -> Path | None:
+    df = product_demand.copy()
+
+    required_cols = {"product_name", "relative_week_index", "units_sold"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing columns in product_demand: {sorted(missing)}")
+
+    df["relative_week_index"] = pd.to_numeric(df["relative_week_index"], errors="coerce")
+    df["units_sold"] = pd.to_numeric(df["units_sold"], errors="coerce")
+    df = df.dropna(subset=["product_name", "relative_week_index", "units_sold"]).copy()
+    df = df[df["relative_week_index"] > 0].copy()
+
+    if df.empty:
+        print("No product demand data available for seasonality index.")
+        return None
+
+    df["cycle_position"] = df["relative_week_index"] % period
+
+    baseline = (
+        df.groupby("product_name")["units_sold"]
+        .mean()
+        .reset_index(name="avg_units")
+    )
+
+    cycle = (
+        df.groupby(["product_name", "cycle_position"])["units_sold"]
+        .mean()
+        .reset_index(name="cycle_avg_units")
+    )
+
+    cycle = cycle.merge(baseline, on="product_name", how="left")
+    cycle["seasonality_index"] = cycle["cycle_avg_units"] / cycle["avg_units"]
+
+    pivot = cycle.pivot_table(
+        index="product_name",
+        columns="cycle_position",
+        values="seasonality_index",
+        aggfunc="mean"
+    ).fillna(0)
+
+    plt.figure(figsize=(10, 6))
+    plt.imshow(pivot, aspect="auto")
+    plt.colorbar(label="Seasonality Index")
+
+    plt.xlabel("Week Position in 4-Week Cycle")
+    plt.ylabel("Product")
+    plt.title("Product Demand Seasonality Index")
+
+    path = FIGURES_DIR / "product_demand_seasonality_index.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
+def plot_prophet_forecast() -> Path | None:
+    series = build_normalized_department_series(exclude_week_zero=True)
+
+    if series.empty or len(series) < 12:
+        print("Not enough data for Prophet forecast.")
+        return None
+
+    df = series.reset_index()
+    df.columns = ["relative_week_index", "y"]
+
+    # pseudo-date hebdomadaire
+    anchor_date = pd.Timestamp("2020-01-06")
+    df["ds"] = anchor_date + pd.to_timedelta((df["relative_week_index"] - 1) * 7, unit="D")
+
+    prophet_df = df[["ds", "y"]].copy()
+
+    model = Prophet(
+        yearly_seasonality=False,
+        weekly_seasonality=False,
+        daily_seasonality=False
+    )
+
+    model.fit(prophet_df)
+
+    future = model.make_future_dataframe(periods=12, freq="W-MON")
+    forecast = model.predict(future)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(prophet_df["ds"], prophet_df["y"], label="Actual")
+    plt.plot(forecast["ds"], forecast["yhat"], linestyle="--", label="Prophet forecast")
+
+    plt.xlabel("Pseudo Weekly Date")
+    plt.ylabel("Units per Order")
+    plt.title("Prophet Demand Forecast")
+    plt.legend()
+
+    path = FIGURES_DIR / "prophet_forecast.png"
+
+    plt.tight_layout()
+    plt.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return path
+
 def generate_html_report(image_paths: list[Path]) -> Path:
     html_path = REPORT_DIR / "demand_forecasting_report.html"
 
@@ -670,8 +1442,21 @@ def generate_html_report(image_paths: list[Path]) -> Path:
         "department_peak_weeks": "Shows the reconstructed relative week in which each department reaches its highest observed demand, excluding week 0 to reduce cohort alignment bias.",
         "weekly_demand_pattern": "Displays the overall weekly demand pattern across all products and departments.",
         "replenishment_cycle_pattern": "Shows the 4-week replenishment cycle pattern across all products and departments.",
-        "product_demand_heatmap": "Visualizes the demand for each product across different weeks using a heatmap."
-
+        "product_demand_heatmap": "Visualizes the demand for each product across different weeks using a heatmap.",
+        "demand_acf": "Displays the autocorrelation function (ACF) of the demand series to identify temporal dependencies.",
+        "product_series_banana": "Shows the weekly reconstructed demand series for Banana before forecasting.",
+        "normalized_department_series": "Displays department demand normalized by order volume to reduce cohort decay effects.",
+        "arima_forecast_banana": "Applies an ARIMA baseline forecast to the Banana demand series.",
+        "arima_forecast_normalized_department": "Applies an ARIMA baseline forecast to normalized department demand.",
+        "stl_decomposition": "STL decomposition separating trend, seasonal component, and residual noise in the normalized department demand series.",
+        "reorder_interval_distribution": "Displays the distribution of reorder intervals across all customers.",
+        "customer_reorder_segmentation": "Segments customers by their average reorder interval to identify weekly, bi-weekly, monthly, and long-interval shopping behaviors.",
+        "customer_lifetime_ordering_curve": "Shows how the number of active customers declines across the reconstructed relative timeline.",
+        "reorder_interval_distribution_capped": "Displays the distribution of days between orders and highlights the 30-day cap applied by the source dataset.",
+        "reorder_survival_curve": "Shows the probability of a customer reordering as a function of time since their last order.",
+        "customer_reorder_cohorts": "Shows customer reorder retention across cohort start weeks and weeks since first observed order.",
+        "product_demand_seasonality_index": "Compares each product's relative demand intensity across positions in the reconstructed 4-week demand cycle.",
+        "prophet_forecast": "Uses Prophet to project normalized department demand trend on a pseudo-weekly timeline derived from relative weeks.",
     }
 
     cards_html = f"""
@@ -752,6 +1537,15 @@ def generate_html_report(image_paths: list[Path]) -> Path:
         "weekly_demand_pattern",
         "replenishment_cycle_pattern",
         "product_demand_heatmap",
+        "demand_acf",
+        "stl_decomposition",
+        "reorder_interval_distribution",
+        "reorder_interval_distribution_capped",
+        "customer_reorder_segmentation",
+        "customer_lifetime_ordering_curve",
+        "customer_reorder_cohorts",
+        "product_demand_seasonality_index",
+        "prophet_forecast",
     ]
 
     image_map = {path.stem: path for path in image_paths}
@@ -1023,10 +1817,46 @@ def generate_html_report(image_paths: list[Path]) -> Path:
             </p>
 
             <p>
-            These demand trends provide a stable baseline for future forecasting methods such as moving averages,
-            ARIMA, or Prophet.
+            The reorder interval analysis reveals several distinct shopping rhythms, including weekly, bi-weekly, and monthly behaviors. 
+            The strong spike at 30 days should be interpreted carefully, as the source dataset caps reorder intervals at 30 days. 
+            The customer lifetime ordering curve also explains why aggregate relative-week demand declines over time: fewer customers remain observable in later weeks of the reconstructed timeline.
+            </p>
+
+            <p>
+            <strong>Customer Reorder Cohorts</strong> show how reorder activity declines across customer groups after their first observed order, highlighting retention patterns in the reconstructed timeline.
+            </p>
+
+            <p>
+            <strong>Product Demand Seasonality Index</strong> compares each product's demand intensity across positions in the relative 4-week cycle. It reflects cyclical behavior in reconstructed time, not true calendar seasonality.
+            </p>
+
+            <p>
+            <strong>Prophet Forecast</strong> is applied on a pseudo-weekly timeline to project trend behavior. Because the source dataset does not contain real calendar dates, the forecast should be interpreted as a relative demand projection rather than a real-world seasonal calendar forecast.
             </p>
         </section>
+
+        <h2 class="section-title">Key Analytical Takeaways</h2>
+
+        <ul>
+        <li>Customer ordering behavior clusters around weekly, bi-weekly, and monthly shopping cycles.</li>
+        <li>The Instacart dataset caps reorder intervals at 30 days, which creates an artificial spike in the distribution.</li>
+        <li>Demand patterns show limited seasonality but a mild upward trend in normalized units per order.</li>
+        <li>Customer retention gradually declines across relative weeks, explaining decreasing aggregate demand later in the timeline.</li>
+        <li>Forecasting models therefore focus primarily on trend projection rather than calendar seasonality.</li>
+        </ul>
+
+        <h2 class="section-title">Methodology</h2>
+
+        <p>
+        This analysis reconstructs a relative weekly timeline using customer order sequences and the
+        days_since_prior_order field. Because the Instacart dataset does not contain real calendar
+        dates, all time-series analyses are performed on relative customer timelines.
+        </p>
+
+        <p>
+        Demand analytics, cohort analysis, and forecasting models are built on a DuckDB analytical
+        warehouse using a star schema centered on order-product relationships.
+        </p>
 
         <div class="footer">
             Retail Analytic Platform · Demand Forecasting
@@ -1090,6 +1920,55 @@ def main():
     generated_files.append(plot_weekly_demand_pattern())
     generated_files.append(plot_replenishment_cycle())
     generated_files.append(plot_product_week_heatmap())
+    generated_files.append(plot_demand_acf())
+
+    product_series_chart = plot_product_series("Banana")
+    if product_series_chart is not None:
+        generated_files.append(product_series_chart)
+
+    normalized_series_chart = plot_normalized_department_series()
+    if normalized_series_chart is not None:
+        generated_files.append(normalized_series_chart)
+
+    arima_product_chart = plot_arima_product_forecast("Banana")
+    if arima_product_chart is not None:
+        generated_files.append(arima_product_chart)
+
+    arima_normalized_chart = plot_arima_normalized_department_forecast()
+    if arima_normalized_chart is not None:
+        generated_files.append(arima_normalized_chart)
+        
+        stl_chart = plot_stl_decomposition(period=4)
+
+    if stl_chart is not None:
+        generated_files.append(stl_chart)
+
+    generated_files.append(plot_reorder_interval_distribution())
+    segmentation_chart = plot_customer_reorder_segmentation(customer_reorder)
+
+    if segmentation_chart is not None:
+        generated_files.append(segmentation_chart)
+
+    generated_files.append(plot_customer_lifetime_ordering_curve(customer_lifetime_curve))
+    generated_files.append(plot_reorder_interval_distribution_capped(reorder_intervals))
+    generated_files.append(plot_reorder_interval_cdf(reorder_intervals))
+
+    survival_chart = plot_reorder_survival_curve(reorder_intervals)
+
+    if survival_chart is not None:
+        generated_files.append(survival_chart)
+
+    cohort_chart = plot_customer_reorder_cohorts(customer_reorder_cohorts)
+    if cohort_chart is not None:
+        generated_files.append(cohort_chart)
+
+    seasonality_chart = plot_product_demand_seasonality_index(period=4)
+    if seasonality_chart is not None:
+        generated_files.append(seasonality_chart)
+
+    prophet_chart = plot_prophet_forecast()
+    if prophet_chart is not None:
+        generated_files.append(prophet_chart)
 
     html_report = generate_html_report(generated_files)
 

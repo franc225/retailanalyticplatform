@@ -4,3 +4,4 @@ matplotlib
 numpy<2
 networkx
 pyarrow
+statsmodels

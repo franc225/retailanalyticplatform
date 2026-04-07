@@ -205,7 +205,7 @@
                 weekly timeline using customer order sequences and days-since-prior-order logic in DuckDB. These
                 trend views provide a foundation for future forecasting models and demand planning analysis.
             </p>
-            <div class="meta">Generated on 2026-04-07 11:04</div>
+            <div class="meta">Generated on 2026-04-07 17:16</div>
         </section>
 
         <h2 class="section-title">Key Metrics</h2>
@@ -349,43 +349,108 @@
             <img src="figures/product_demand_heatmap.png" alt="Product Demand Heatmap" class="zoomable">
         </article>
         
+        <article class="chart-card">
+            <h2>Demand Acf</h2>
+            <p class="chart-description">Displays the autocorrelation function (ACF) of the demand series to identify temporal dependencies.</p>
+            <img src="figures/demand_acf.png" alt="Demand Acf" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Stl Decomposition</h2>
+            <p class="chart-description">STL decomposition separating trend, seasonal component, and residual noise in the normalized department demand series.</p>
+            <img src="figures/stl_decomposition.png" alt="Stl Decomposition" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Reorder Interval Distribution</h2>
+            <p class="chart-description">Displays the distribution of reorder intervals across all customers.</p>
+            <img src="figures/reorder_interval_distribution.png" alt="Reorder Interval Distribution" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Reorder Interval Distribution Capped</h2>
+            <p class="chart-description">Displays the distribution of days between orders and highlights the 30-day cap applied by the source dataset.</p>
+            <img src="figures/reorder_interval_distribution_capped.png" alt="Reorder Interval Distribution Capped" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Customer Reorder Segmentation</h2>
+            <p class="chart-description">Segments customers by their average reorder interval to identify weekly, bi-weekly, monthly, and long-interval shopping behaviors.</p>
+            <img src="figures/customer_reorder_segmentation.png" alt="Customer Reorder Segmentation" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Customer Lifetime Ordering Curve</h2>
+            <p class="chart-description">Shows how the number of active customers declines across the reconstructed relative timeline.</p>
+            <img src="figures/customer_lifetime_ordering_curve.png" alt="Customer Lifetime Ordering Curve" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Customer Reorder Cohorts</h2>
+            <p class="chart-description">Shows customer reorder retention across cohort start weeks and weeks since first observed order.</p>
+            <img src="figures/customer_reorder_cohorts.png" alt="Customer Reorder Cohorts" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Product Demand Seasonality Index</h2>
+            <p class="chart-description">Compares each product's relative demand intensity across positions in the reconstructed 4-week demand cycle.</p>
+            <img src="figures/product_demand_seasonality_index.png" alt="Product Demand Seasonality Index" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Prophet Forecast</h2>
+            <p class="chart-description">Uses Prophet to project normalized department demand trend on a pseudo-weekly timeline derived from relative weeks.</p>
+            <img src="figures/prophet_forecast.png" alt="Prophet Forecast" class="zoomable">
+        </article>
+        
         </section>
 
-        <div class="container">
-            <section class="interpretation-card">
-            <h2 class="section-title">How to Interpret These Results</h2>
+        <section class="interpretation-card">
+        <h2 class="section-title">How to Interpret These Results</h2>
 
-                <p>
-                <strong>Relative Week Index</strong> represents a reconstructed weekly position in each customer's order journey,
-                not a true shared calendar week. This means week-level comparisons reflect aligned customer progression rather
-                than real-world seasonality.
-                </p>
+            <p>
+            <strong>Relative Week Index</strong> represents a reconstructed weekly position in each customer's order journey,
+            not a true shared calendar week. This means week-level comparisons reflect aligned customer progression rather
+            than real-world seasonality.
+            </p>
 
-                <p>
-                <strong>Units Sold</strong> measures the total number of product rows observed in weekly order activity.
-                </p>
+            <p>
+            <strong>Units Sold</strong> measures the total number of product rows observed in weekly order activity.
+            </p>
 
-                <p>
-                <strong>Orders Count</strong> counts distinct orders containing a product or department during a given relative week.
-                </p>
+            <p>
+            <strong>Orders Count</strong> counts distinct orders containing a product or department during a given relative week.
+            </p>
 
-                <p>
-                <strong>Peak Relative Week</strong> indicates the reconstructed week in which a product or department reaches
-                its highest observed demand within the relative customer timeline. It does not represent a true calendar
-                week of the year.
-                </p>
+            <p>
+            <strong>Peak Relative Week</strong> indicates the reconstructed week in which a product or department reaches
+            its highest observed demand within the relative customer timeline. It does not represent a true calendar
+            week of the year.
+            </p>
 
-                <p>
-                <strong>Week 0 Exclusion</strong> removes the cohort-aligned starting week shared by nearly all customers,
-                which otherwise dominates the relative timeline and can hide more meaningful later demand peaks.
-                </p>
+            <p>
+            <strong>Week 0 Exclusion</strong> removes the cohort-aligned starting week shared by nearly all customers,
+            which otherwise dominates the relative timeline and can hide more meaningful later demand peaks.
+            </p>
 
-                <p>
-                These demand trends provide a stable baseline for future forecasting methods such as moving averages,
-                ARIMA, or Prophet.
-                </p>
-            </section>
-        </div>
+            <p>
+            The reorder interval analysis reveals several distinct shopping rhythms, including weekly, bi-weekly, and monthly behaviors. 
+            The strong spike at 30 days should be interpreted carefully, as the source dataset caps reorder intervals at 30 days. 
+            The customer lifetime ordering curve also explains why aggregate relative-week demand declines over time: fewer customers remain observable in later weeks of the reconstructed timeline.
+            </p>
+
+            <p>
+            <strong>Customer Reorder Cohorts</strong> show how reorder activity declines across customer groups after their first observed order, highlighting retention patterns in the reconstructed timeline.
+            </p>
+
+            <p>
+            <strong>Product Demand Seasonality Index</strong> compares each product's demand intensity across positions in the relative 4-week cycle. It reflects cyclical behavior in reconstructed time, not true calendar seasonality.
+            </p>
+
+            <p>
+            <strong>Prophet Forecast</strong> is applied on a pseudo-weekly timeline to project trend behavior. Because the source dataset does not contain real calendar dates, the forecast should be interpreted as a relative demand projection rather than a real-world seasonal calendar forecast.
+            </p>
+        </section>
 
         <div class="footer">
             Retail Analytic Platform · Demand Forecasting

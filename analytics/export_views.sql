@@ -94,3 +94,70 @@ TO 'data/exports/top_product_demand_timeseries.parquet'
 COPY mart.export_department_demand_weekly
 TO 'data/exports/department_demand_timeseries.parquet'
 (FORMAT PARQUET);
+
+COPY (
+    SELECT
+        days_since_prior_order
+    FROM orders
+    WHERE days_since_prior_order IS NOT NULL
+) TO 'data/exports/reorder_intervals.csv'
+WITH (HEADER, DELIMITER ',');
+
+COPY (
+    SELECT
+        user_id,
+        COUNT(*) AS total_orders,
+        AVG(days_since_prior_order) AS avg_reorder_days
+    FROM orders
+    WHERE days_since_prior_order IS NOT NULL
+    GROUP BY user_id
+) TO 'data/exports/customer_reorder_behavior.csv'
+WITH (HEADER, DELIMITER ',');
+
+COPY (
+    SELECT
+        relative_week_index,
+        COUNT(DISTINCT customer_id) AS active_customers,
+        COUNT(DISTINCT order_id) AS active_orders,
+        COUNT(*) AS total_items
+    FROM mart.fact_order_items
+    WHERE relative_week_index > 0
+    GROUP BY relative_week_index
+    ORDER BY relative_week_index
+) TO 'data/exports/customer_lifetime_curve.csv'
+WITH (HEADER, DELIMITER ',');
+
+COPY (
+    WITH customer_first_week AS (
+        SELECT
+            customer_id,
+            MIN(relative_week_index) AS cohort_week
+        FROM mart.fact_order_items
+        WHERE relative_week_index > 0
+        GROUP BY customer_id
+    ),
+    customer_activity AS (
+        SELECT DISTINCT
+            f.customer_id,
+            f.relative_week_index
+        FROM mart.fact_order_items f
+        WHERE f.relative_week_index > 0
+    )
+    SELECT
+        cfw.cohort_week,
+        ca.relative_week_index,
+        ca.relative_week_index - cfw.cohort_week AS cohort_age,
+        COUNT(DISTINCT ca.customer_id) AS active_customers
+    FROM customer_first_week cfw
+    JOIN customer_activity ca
+        ON cfw.customer_id = ca.customer_id
+       AND ca.relative_week_index >= cfw.cohort_week
+    GROUP BY
+        cfw.cohort_week,
+        ca.relative_week_index,
+        cohort_age
+    ORDER BY
+        cfw.cohort_week,
+        ca.relative_week_index
+) TO 'data/exports/customer_reorder_cohorts.csv'
+WITH (HEADER, DELIMITER ',');

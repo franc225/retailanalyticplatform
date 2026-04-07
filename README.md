@@ -4,8 +4,14 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-orange)
-![Dataset](https://img.shields.io/badge/Data-Kaggle-green)
-![Status](https://img.shields.io/badge/Stage-Demand%20Forecasting-brightgreen)
+![Pandas](https://img.shields.io/badge/Pandas-Data%20Wrangling-150458)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-11557c)
+![Statsmodels](https://img.shields.io/badge/Statsmodels-Time%20Series-6A5ACD)
+![Prophet](https://img.shields.io/badge/Prophet-Forecasting-0F9D58)
+![Dataset](https://img.shields.io/badge/Data-Kaggle%20Instacart-green)
+![Stage](https://img.shields.io/badge/Stage-Demand%20Forecasting-brightgreen)
+![Model](https://img.shields.io/badge/Model-Star%20Schema-lightgrey)
+![Reports](https://img.shields.io/badge/Output-HTML%20Reports-informational)
 
 Retail analytics project based on the Instacart Market Basket dataset.
 
@@ -18,7 +24,33 @@ The objective is to build a complete analytics pipeline including:
 - customer analytics
 - demand forecasting
 
-This project demonstrates practical data engineering and business intelligence workflows using Python and DuckDB.
+## What This Project Demonstrates
+
+This project demonstrates practical experience with:
+
+- analytical data modeling
+- SQL-based data marts
+- customer behavior analysis
+- retail demand diagnostics
+- time-series preparation under imperfect data constraints
+- forecasting baselines and trend projection
+- automated business-facing reporting
+
+## Customer Reorder Behavior
+
+One of the key insights from the Instacart dataset is the presence of
+distinct grocery shopping rhythms across customers.
+
+![Customer Reorder Segmentation](reports/figures/customer_reorder_segmentation.png)
+
+Customers naturally cluster around three primary ordering cycles:
+
+- weekly shoppers (~7 days)
+- bi-weekly shoppers (~14 days)
+- monthly shoppers (~30 days)
+
+This pattern reflects typical household replenishment behavior and
+explains many of the demand patterns observed in the dataset.
 
 ## Dataset
 
@@ -65,6 +97,16 @@ Forecasting Preparation
       ↓
 Forecasting Models
 ```
+
+### Dataset Constraints
+
+Important limitations of the source data:
+
+- `days_since_prior_order` is capped at **30 days**
+- true calendar dates are **not available**
+- time-series analysis must therefore rely on a **reconstructed relative timeline**
+
+These constraints directly influence forecasting design and interpretation.
 
 ## Data Model
 
@@ -185,6 +227,7 @@ This enables:
 - product demand evolution
 - department demand comparison
 - demand cycle detection
+- customer cohort analysis
 
 ### Demand Trend Analysis
 
@@ -196,29 +239,49 @@ Analyses include:
 - department demand trends
 - top products by demand
 - top departments by demand
+- weekly demand evolution
 
-### Replenishment Cycle Detection
+### Time-Series Diagnostics
 
-Demand patterns are analyzed to detect recurring purchasing cycles.
+Several statistical diagnostics are applied before forecasting:
 
-Preliminary analysis suggests a **four-week replenishment pattern**
-for several grocery products, which is consistent with typical
-household restocking behavior.
+- demand autocorrelation analysis (ACF)
+- STL trend and seasonality decomposition
+- demand anomaly detection
+- relative demand cycle analysis
 
-### Forecasting Baseline
+These diagnostics help evaluate the structure of demand signals before applying forecasting models.
 
-A **4-week moving average** is used as a baseline demand forecast.
+### Customer Behavior & Demand Drivers
 
-This baseline provides a simple reference model that can later
-be compared against more advanced statistical forecasting methods.
+Customer ordering behavior strongly influences demand patterns.
 
-### Anomaly Detection
+Customer behavior analysis includes:
 
-Demand anomalies are detected using statistical deviation from
-average weekly demand.
+- reorder interval distribution
+- capped reorder interval detection (dataset limitation)
+- customer reorder segmentation
+- customer lifetime ordering curve
+- customer reorder cohort analysis
 
-This allows identification of unusual demand spikes or drops,
-which may correspond to behavioral patterns or special events.
+These analyses reveal typical grocery shopping cycles such as:
+
+- weekly shoppers (~7 days)
+- bi-weekly shoppers (~14 days)
+- monthly shoppers (~30 days)
+
+### Forecasting Baselines
+
+Several baseline forecasting approaches are implemented:
+
+- **4-week moving average forecast**
+- **ARIMA diagnostic models**
+- **Prophet trend projection**
+
+Because real timestamps are unavailable, Prophet uses a **pseudo-weekly date index**
+derived from the relative week index.
+
+Therefore forecasts should be interpreted as **relative demand projections rather than real calendar forecasts**.
 
 ### Visualizations
 
@@ -231,6 +294,14 @@ Forecasting analysis produces several visualizations:
 - demand anomaly detection
 - replenishment cycle pattern
 - product demand heatmap
+- demand autocorrelation (ACF)
+- STL decomposition
+- reorder interval distribution
+- customer reorder segmentation
+- customer lifetime ordering curve
+- customer reorder cohorts
+- product demand seasonality index
+- Prophet forecast
 
 ## Star schema
 
@@ -421,13 +492,20 @@ Customer analytics
 - customer segmentation
 - automated HTML report with behavioral insights
 
-Demand forecasting (phase 1)
+Demand forecasting
 - relative time reconstruction
 - weekly demand aggregation
 - moving average baseline forecast
 - demand anomaly detection
 - replenishment cycle analysis
-- product demand heatmap
+- demand autocorrelation (ACF)
+- STL demand decomposition
+- customer reorder interval analysis
+- customer reorder segmentation
+- customer lifetime ordering curve
+- customer reorder cohort analysis
+- product demand seasonality index
+- Prophet trend forecasting
 - automated HTML forecasting report
 
 ## Repository Structure
@@ -471,13 +549,13 @@ retail-analytic-platform
 
 Planned improvements for the forecasting module include:
 
-- statistical forecasting models
-  - ARIMA forecasting
-  - Prophet forecasting
-- demand autocorrelation analysis
-- seasonal demand decomposition
-- product-level forecast visualization
+- advanced ARIMA demand forecasting
+- probabilistic demand forecasting
 - forecast accuracy metrics (MAE, RMSE)
+- demand anomaly detection using statistical models
+- product association demand forecasting
+- market basket demand interaction analysis
+- demand forecasting dashboards
 	
 ## Technologies
 
@@ -502,13 +580,14 @@ Example visualizations generated by the pipeline:
 
 The full visualization set is available in the generated HTML analytics report.
 
-## Example Forecasting Insights
+## Business Insights
 
-Initial demand analysis reveals several interesting patterns:
+The project surfaces several retail-relevant insights from Instacart transaction data:
 
-- strong dominance of the **produce department**
-- bananas representing a large share of product demand
-- a potential **4-week replenishment cycle** visible in demand trends
-- demand anomalies that may indicate behavioral or seasonal events
-
-These insights provide a foundation for future forecasting models.
+- **Produce dominates category demand**, making it the strongest driver of basket activity.
+- **Bananas represent a disproportionately large share of product demand**, illustrating the importance of staple-item forecasting.
+- Customer ordering behavior clusters around **weekly, bi-weekly, and monthly shopping rhythms**.
+- The large spike at **30 days** in reorder intervals must be interpreted carefully because the source dataset caps `days_since_prior_order` at 30.
+- Aggregate demand declines in later relative weeks largely because **fewer customers remain observable over time**, not necessarily because demand collapses.
+- Time-series diagnostics suggest that the reconstructed demand series shows **trend structure with limited seasonality**, making it more suitable for trend projection than calendar-seasonal forecasting.
+- Forecasting outputs should therefore be interpreted as **relative demand projections** rather than real-world calendar forecasts.
