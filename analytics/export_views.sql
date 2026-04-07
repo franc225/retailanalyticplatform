@@ -45,3 +45,32 @@ COPY (
 )
 TO 'data/exports/association_rules.csv'
 (HEADER, DELIMITER ',');
+
+COPY (
+SELECT
+    total_orders
+FROM mart.v_customer_metrics
+)
+TO 'data/exports/customer_frequency.csv'
+(HEADER, DELIMITER ',');
+
+COPY (
+SELECT *
+FROM mart.v_customer_reorder
+)
+TO 'data/exports/customer_reorder.csv'
+(HEADER, DELIMITER ',');
+
+COPY (
+SELECT *
+FROM mart.v_customer_segments
+)
+TO 'data/exports/customer_segments.csv'
+(HEADER, DELIMITER ',');
+
+COPY (
+    SELECT *
+    FROM mart.v_customer_metrics
+)
+TO 'data/exports/customer_metrics.csv'
+(HEADER, DELIMITER ',');

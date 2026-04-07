@@ -1,0 +1,414 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Analytics Report</title>
+    <style>
+        :root {
+            --bg: #f6f8fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 20px 48px;
+        }
+
+        .hero {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            margin: 0 0 12px;
+            font-size: 2rem;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--muted);
+            max-width: 820px;
+        }
+
+        .meta {
+            margin-top: 16px;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        .section-title {
+            margin: 28px 0 16px;
+            font-size: 1.35rem;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .kpi-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 1.35rem;
+            font-weight: bold;
+            word-break: break-word;
+        }
+
+        .kpi-value.small {
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .chart-card h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+        }
+
+        .chart-description {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .chart-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #fff;
+            cursor: zoom-in;
+            transition: transform 0.2s ease;
+            max-height: 420px;
+            object-fit: contain;
+        }
+
+        .chart-card img:hover {
+            transform: scale(1.01);
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            padding-top: 40px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+        }
+
+        .image-modal img {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 85%;
+        }
+
+        .image-modal span {
+            position: absolute;
+            top: 25px;
+            right: 40px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+        }
+
+        .footer {
+            margin-top: 32px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 1.6rem;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <h1>Customer Analytics Report</h1>
+            <p>
+                This report analyzes customer behavior from the Instacart Market Basket dataset.
+                It focuses on purchase frequency, reorder behavior, and customer segmentation
+                using aggregated customer metrics exported from DuckDB and visualized with Python and Matplotlib.
+            </p>
+            <div class="meta">Generated on 2026-04-06 20:00</div>
+        </section>
+
+        <h2 class="section-title">Key Metrics</h2>
+        
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Customers</div>
+            <div class="kpi-value">206,209</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Orders per Customer</div>
+            <div class="kpi-value">16.23</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Reorder Rate</div>
+            <div class="kpi-value">0.444</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Largest Segment</div>
+            <div class="kpi-value small">Occasional Customers</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Basket Size</div>
+            <div class="kpi-value">9.98</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Days Between Orders</div>
+            <div class="kpi-value">15.36</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Highest Engagement Segment</div>
+            <div class="kpi-value small">Power Users</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Highest Basket Size Segment</div>
+            <div class="kpi-value small">Frequent Customers</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Highest Reorder Segment</div>
+            <div class="kpi-value small">Power Users</div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Key Insights</h2>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Customer Behavior Focus</div>
+            <div class="kpi-value small">
+                Purchase frequency, reorder behavior, and simple behavioral segmentation
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">Largest Customer Group</div>
+            <div class="kpi-value small">
+                Occasional Customers
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">Average Customer Activity</div>
+            <div class="kpi-value small">
+                16.23 orders per customer
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">Typical Reorder Behavior</div>
+            <div class="kpi-value small">
+                Average reorder rate of 0.444
+            </div>
+        </div>
+    </div>
+
+        <h2 class="section-title">Business Insights</h2>
+
+    <div class="kpi-card">
+        <p>
+        <strong>Engagement:</strong> Power Users represent the most active customers,
+        averaging 68.93 orders per customer. These customers likely drive a
+        disproportionate share of demand and are prime candidates for loyalty programs.
+        </p>
+
+        <p>
+        <strong>Basket behavior:</strong> Frequent Customers show the largest baskets,
+        suggesting consistent purchasing routines and strong cross-category demand.
+        </p>
+
+        <p>
+        <strong>Reorder patterns:</strong> Power Users demonstrate the strongest
+        reorder behavior, indicating habitual purchasing and potential brand loyalty.
+        </p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Engagement Insight</div>
+            <div class="kpi-value small">
+                The most engaged customer segment is <strong>Power Users</strong>, with an average of <strong>68.93</strong> orders per customer.
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">Basket Insight</div>
+            <div class="kpi-value small">
+                The segment with the largest baskets is <strong>Frequent Customers</strong>, with an average basket size of <strong>10.37</strong>.
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Reorder Insight</div>
+            <div class="kpi-value small">
+                The segment with the strongest reorder behavior is <strong>Power Users</strong>, with an average reorder rate of <strong>0.736</strong>.
+            </div>
+        </div>
+    </div>
+    
+
+        <h2 class="section-title">Visual Insights</h2>
+        <section class="chart-grid">
+            
+        <article class="chart-card">
+            <h2>Purchase Frequency Distribution</h2>
+            <p class="chart-description">Shows how frequently customers place orders across the dataset.</p>
+            <img src="figures/orders_per_customer_distribution.png" alt="Purchase Frequency Distribution" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Customer Reorder Behavior</h2>
+            <p class="chart-description">Shows how strongly customers tend to repurchase previously ordered products.</p>
+            <img src="figures/reorder_rate_distribution.png" alt="Customer Reorder Behavior" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Orders vs Reorder Rate</h2>
+            <p class="chart-description">Compares purchase frequency and reorder behavior across customers.</p>
+            <img src="figures/orders_vs_reorder_rate.png" alt="Orders vs Reorder Rate" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Customer Segmentation</h2>
+            <p class="chart-description">Shows the distribution of customers across predefined behavioral segments.</p>
+            <img src="figures/customer_segments.png" alt="Customer Segmentation" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Basket Size by Segment</h2>
+            <p class="chart-description">Compares average basket size across customer segments.</p>
+            <img src="figures/avg_basket_size_by_segment.png" alt="Basket Size by Segment" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Ordering Frequency by Segment</h2>
+            <p class="chart-description">Compares ordering cadence across customer segments.</p>
+            <img src="figures/avg_days_between_orders_by_segment.png" alt="Ordering Frequency by Segment" class="zoomable">
+        </article>
+        
+        <article class="chart-card">
+            <h2>Basket Size Distribution</h2>
+            <p class="chart-description">Shows how average basket size varies across customers.</p>
+            <img src="figures/basket_size_distribution.png" alt="Basket Size Distribution" class="zoomable">
+        </article>
+        
+        </section>
+
+        <div class="footer">
+            Retail Analytic Platform · Customer Analytics
+        </div>
+    </div>
+
+    <div id="imgModal" class="image-modal">
+        <span id="closeModal">&times;</span>
+        <img id="modalImage">
+    </div>
+
+    <script>
+        const modal = document.getElementById("imgModal");
+        const modalImg = document.getElementById("modalImage");
+        const closeBtn = document.getElementById("closeModal");
+
+        document.querySelectorAll(".zoomable").forEach(img => {
+            img.onclick = function() {
+                modal.style.display = "block";
+                modalImg.src = this.src;
+            };
+        });
+
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        };
+
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                modal.style.display = "none";
+            }
+        };
+    </script>
+
+    <h2 class="section-title">How to Interpret These Results</h2>
+
+    <p>
+    <strong>Purchase frequency</strong> shows how often customers place orders.
+    Customers with more orders tend to contribute more stable long-term demand.
+    </p>
+
+    <p>
+    <strong>Reorder rate</strong> measures how strongly customers repurchase previously ordered products.
+    Higher values suggest more routine or habitual purchasing behavior.
+    </p>
+
+    <p>
+    <strong>Customer segments</strong> group customers based on ordering frequency.
+    This helps identify occasional buyers, regulars, and high-value repeat customers.
+    </p>
+</body>
+</html>

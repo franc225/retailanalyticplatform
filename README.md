@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-orange)
 ![Dataset](https://img.shields.io/badge/Data-Kaggle-green)
-![Status](https://img.shields.io/badge/Stage-Market%20Basket%20Analysis-brightgreen)
+![Status](https://img.shields.io/badge/Stage-Customer%20Analytics-brightgreen)
 
 Retail analytics project based on the Instacart Market Basket dataset.
 
@@ -121,6 +121,38 @@ The association rules enable identification of:
 
 The results are exported as CSV and visualized using Python and Matplotlib.
 
+## Customer Analytics
+
+Customer Analytics focuses on understanding behavioral patterns across the customer base.
+
+The analysis uses aggregated customer metrics derived from the order-item fact table.
+
+Key customer metrics include:
+
+- total orders per customer
+- reorder rate
+- average basket size
+- average days between orders
+
+Customers are grouped into behavioral segments based on ordering frequency, enabling identification of:
+
+- occasional buyers
+- regular customers
+- high-frequency users
+- power users
+
+Customer analytics visualizations include:
+
+- purchase frequency distribution
+- reorder rate distribution
+- orders vs reorder rate
+- customer segmentation
+- basket size by segment
+- ordering cadence by segment
+- basket size distribution
+
+The results are exported as CSV datasets and visualized using Python and Matplotlib.
+
 ## Star schema
 
 The analytical model follows a classic **star schema** centered on the
@@ -222,6 +254,42 @@ The report includes:
 
 The report provides an interactive visualization layout with image zoom for detailed inspection.
 
+## Customer Analytics Report
+
+An automated HTML report is generated from the customer analytics pipeline.
+
+The report includes:
+
+- key customer metrics
+- behavioral segmentation
+- reorder behavior analysis
+- basket size analysis
+- purchase frequency analysis
+
+Features:
+
+- KPI summary
+- behavioral insights
+- visualization grid
+- interactive image zoom
+- responsive layout
+
+Example report structure:
+
+```text
+Customer Analytics Report
+│
+├── Key Metrics
+│
+├── Purchase Frequency Distribution
+├── Reorder Rate Distribution
+├── Orders vs Reorder Rate
+├── Customer Segmentation
+├── Basket Size by Segment
+├── Ordering Frequency by Segment
+└── Basket Size Distribution
+```
+
 ## Current Progress
 
 Completed:
@@ -249,6 +317,13 @@ Market basket analysis
 - cross-sell opportunity analysis
 - automated HTML report with interactive visualizations
 
+Customer analytics
+- customer behavior metrics
+- purchase frequency analysis
+- reorder behavior analysis
+- customer segmentation
+- automated HTML report with behavioral insights
+
 ## Repository Structure
 
 ```text
@@ -274,8 +349,9 @@ retail-analytic-platform
 |
 ├── reports
 │   ├── figures
-│   └── retail_analytics_report.html
-│   └── market_basket_report.html
+│   ├── retail_analytics_report.html
+│   ├── market_basket_report.html
+│   └── customer_analytics_report.html
 │
 ├── notebooks
 │
@@ -284,10 +360,6 @@ retail-analytic-platform
 
 ## Planned Analyses
 
-- Customer Analytics
-	- purchase frequency
-	- reorder behavior
-	- customer segmentation
 - Demand Forecasting
       - product demand forecasting
       - department demand trends

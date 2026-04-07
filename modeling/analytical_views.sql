@@ -177,3 +177,71 @@ JOIN mart.dim_product p1
     ON ar.product_1 = p1.product_id
 JOIN mart.dim_product p2
     ON ar.product_2 = p2.product_id;
+
+CREATE OR REPLACE VIEW mart.v_customer_metrics AS
+SELECT
+    customer_id,
+    COUNT(DISTINCT order_id) AS total_orders,
+    COUNT(*) AS total_items,
+    AVG(basket_size) AS avg_basket_size,
+    SUM(reordered) AS total_reordered_items,
+    AVG(days_since_prior_order) AS avg_days_between_orders,
+    MAX(order_number) AS last_order_number
+FROM mart.fact_order_items
+GROUP BY customer_id;
+
+CREATE OR REPLACE VIEW mart.v_customer_reorder AS
+SELECT
+    customer_id,
+    total_orders,
+    total_items,
+    total_reordered_items,
+    total_reordered_items * 1.0 / total_items AS reorder_rate
+FROM mart.v_customer_metrics;
+
+CREATE OR REPLACE VIEW mart.v_customer_segments AS
+SELECT
+    customer_id,
+    total_orders,
+    CASE
+        WHEN total_orders >= 50 THEN 'Power Users'
+        WHEN total_orders >= 20 THEN 'Frequent Customers'
+        WHEN total_orders >= 10 THEN 'Regular Customers'
+        ELSE 'Occasional Customers'
+    END AS customer_segment
+FROM mart.v_customer_metrics;
+
+CREATE OR REPLACE VIEW mart.v_customer_metrics AS
+WITH customer_orders AS (
+    SELECT DISTINCT
+        customer_id,
+        order_id,
+        basket_size,
+        days_since_prior_order,
+        order_number
+    FROM mart.fact_order_items
+),
+customer_items AS (
+    SELECT
+        customer_id,
+        COUNT(*) AS total_items,
+        SUM(reordered) AS total_reordered_items
+    FROM mart.fact_order_items
+    GROUP BY customer_id
+)
+SELECT
+    co.customer_id,
+    COUNT(co.order_id) AS total_orders,
+    ci.total_items,
+    ci.total_reordered_items,
+    ci.total_reordered_items * 1.0 / ci.total_items AS reorder_rate,
+    AVG(co.basket_size) AS avg_basket_size,
+    AVG(co.days_since_prior_order) AS avg_days_between_orders,
+    MAX(co.order_number) AS last_order_number
+FROM customer_orders co
+JOIN customer_items ci
+    ON co.customer_id = ci.customer_id
+GROUP BY
+    co.customer_id,
+    ci.total_items,
+    ci.total_reordered_items;
